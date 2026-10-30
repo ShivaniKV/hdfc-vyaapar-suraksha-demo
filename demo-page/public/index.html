@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vyaapar Suraksha Assistant – Pilot Demo</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>Business Secure Vyaapar Suraksha</h1>
+      <p class="sub">Customer service assistant · Pilot demo for HDFC ERGO, prepared by Skillmine on Perfox.ai</p>
+    </div>
+    <button id="reset" class="reset" type="button">Reset demo</button>
+  </header>
+
+  <nav class="tabs" aria-label="Views">
+    <button type="button" class="tab" data-view="guide" aria-selected="true">Policy Guide</button>
+    <button type="button" class="tab" data-view="apply" aria-selected="false">Apply</button>
+  </nav>
+
+  <main>
+    <section id="guide" class="view">
+      <p class="lead">One package policy for your business with <strong>21 sections</strong>. Section I is compulsory; the other 20 are optional. Ask the assistant anything, or open <strong>Apply</strong> when you're ready. Every <em>Read in the policy</em> link opens HDFC ERGO's own document at the exact place, highlighted.</p>
+
+      <div class="card kinds">
+        <h2>Section I – Property Damage: two kinds</h2>
+        <div class="kind-grid">
+          <div>
+            <h3>Named Perils</h3>
+            <p>Pays only for the dangers listed in the policy: fire, explosion, lightning, landslide, forest fire, impact damage, riot and strike, water tank bursting, sprinkler leakage. You can add <strong>storm and flood</strong> and <strong>earthquake</strong>.</p>
+            <p class="links"><button type="button" class="ref" data-topic="named-perils">Read in the policy</button> <button type="button" class="ref" data-topic="perils-list">See the list</button></p>
+          </div>
+          <div>
+            <h3>All Risk</h3>
+            <p>Pays for any sudden, accidental physical loss or damage, except what the policy specifically excludes. It covers more situations.</p>
+            <p class="links"><button type="button" class="ref" data-topic="all-risk">Read in the policy</button></p>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="list-title">The 21 sections</h2>
+      <p class="hint">Tick the optional sections you want; your ticks carry over to the Apply form.</p>
+      <ol id="sections" class="sections"></ol>
+    </section>
+
+    <section id="apply" class="view" hidden>
+      <p class="lead">Fill in what applies to your business. Questions appear only for the sections you choose. Use <strong>What's this?</strong> beside any item to read it in the policy. PAN, KYC, ID and bank details are not collected here; you submit them directly to HDFC ERGO.</p>
+      <form id="proposal" novalidate></form>
+      <div id="review" class="card review" hidden></div>
+    </section>
+  </main>
+
+  <aside id="viewer" class="viewer" hidden aria-labelledby="viewer-title">
+    <div class="viewer-head">
+      <div>
+        <h2 id="viewer-title"></h2>
+        <p id="viewer-plain"></p>
+        <p class="viewer-where"><span id="viewer-where"></span> · <a id="viewer-official" target="_blank" rel="noopener">Open the original on hdfcergo.com</a></p>
+      </div>
+      <button type="button" id="viewer-close" class="close" aria-label="Close">✕</button>
+    </div>
+    <div class="viewer-nav">
+      <button type="button" id="page-prev">‹ Previous page</button>
+      <span id="page-of"></span>
+      <button type="button" id="page-next">Next page ›</button>
+    </div>
+    <div id="viewer-page" class="viewer-page"><p class="loading">Opening the document…</p></div>
+  </aside>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+  <script src="fill-pdf.js"></script>
+  <script src="app.js"></script>
+  <script
+    src="https://vasueyeandskinhospital-api.perfox.ai/widget/v1/widget.js"
+    data-site="sa_site_live_PYN466SQ8YFTJ5SF4MRYM7DKFWW20W8V"
+    defer></script>
+</body>
+</html>
