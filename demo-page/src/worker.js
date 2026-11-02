@@ -279,13 +279,18 @@ export class ClaimsStore extends DurableObject {
 
     if (name === 'start_verification') {
       const c = findCustomer(a.policy_number);
-      const mobile = String(a.mobile || '').replace(/\D/g, '').slice(-10);
+      const digits = String(a.mobile || '').replace(/\D/g, '');
+      // The model sometimes sends the OTP here instead of to verify_otp, glued to the mobile or in an otp field.
+      const otp = digits.length === 16 && digits.slice(0, 10) === c?.mobile ? digits.slice(10) : String(a.otp || '').replace(/\D/g, '');
+      if (c && session.pending === c.policy && otp) return this.call('verify_otp', { otp }, conv);
+      const mobile = otp && digits.length === 16 ? digits.slice(0, 10) : digits.slice(-10);
       if (!c || c.mobile !== mobile) return { ok: false, say: 'No policy matches that policy number and mobile number. Ask the customer to check both, or contact HDFC ERGO on 022 6158 2020 / 022 6234 6234.' };
       session.pending = c.policy; session.tries = 0;
       await this.save(s);
       return { ok: true, say: `An OTP has been sent to the mobile number ending ${c.mobile.slice(-4)}. Ask the customer to type it here.`, next: 'When the customer sends the 6-digit OTP, call verify_otp with it. Do not call start_verification again.' };
     }
     if (name === 'verify_otp') {
+      if (!session.pending && me) return { ok: true, first_name: me.name.split(' ')[0], say: 'Already verified. Continue with what the customer asked.' };
       if (!session.pending) return needVerified;
       if (String(a.otp || '').replace(/\D/g, '') !== DEMO_OTP) {
         session.tries = (session.tries || 0) + 1;
@@ -310,7 +315,11 @@ export class ClaimsStore extends DurableObject {
     }
     if (name === 'check_claim') {
       const r = checkClaim(me, a);
-      return { ok: true, ...r, what_to_do_now: DO_NOW, documents: documentsFor(r.event), wording: WORDING, contacts: '022 6158 2020 or 022 6234 6234, WhatsApp 8169 500 500' };
+      const label = r.result === 'likely_covered' ? 'likely covered' : r.result === 'likely_not_covered' ? 'likely not covered' : 'needs review by HDFC ERGO';
+      return {
+        ok: true, ...r, what_to_do_now: DO_NOW, documents: documentsFor(r.event), wording: WORDING, contacts: '022 6158 2020 or 022 6234 6234, WhatsApp 8169 500 500',
+        say: `This check is complete; answer the customer now, in their language. Say the loss is ${label}${r.reasons.length ? ' because: ' + r.reasons.map(x => `${x.reason} (${x.source})`).join(' ') : ''} Then: "HDFC ERGO's surveyor makes the final decision." Then the what to do now steps and documents as short bullets, then ask if they want to register the claim.`,
+      };
     }
     if (name === 'register_claim') {
       const r = checkClaim(me, a);
