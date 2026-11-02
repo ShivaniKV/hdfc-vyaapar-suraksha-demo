@@ -265,6 +265,7 @@ export class ClaimsStore extends DurableObject {
     if (method === 'tools/call') {
       const conv = request.headers.get('X-Sa-Conversation-Id') || 'no-conversation';
       const out = await this.call(params?.name, params?.arguments || {}, conv);
+      console.log('tool', params?.name, JSON.stringify(params?.arguments || {}), '->', JSON.stringify(out).slice(0, 160));
       return reply({ content: [{ type: 'text', text: JSON.stringify(out) }] });
     }
     return json({ jsonrpc: '2.0', id, error: { code: -32601, message: 'Method not found' } });
@@ -282,7 +283,7 @@ export class ClaimsStore extends DurableObject {
       if (!c || c.mobile !== mobile) return { ok: false, say: 'No policy matches that policy number and mobile number. Ask the customer to check both, or contact HDFC ERGO on 022 6158 2020 / 022 6234 6234.' };
       session.pending = c.policy; session.tries = 0;
       await this.save(s);
-      return { ok: true, say: `An OTP has been sent to the mobile number ending ${c.mobile.slice(-4)}. Ask the customer to type it here.` };
+      return { ok: true, say: `An OTP has been sent to the mobile number ending ${c.mobile.slice(-4)}. Ask the customer to type it here.`, next: 'When the customer sends the 6-digit OTP, call verify_otp with it. Do not call start_verification again.' };
     }
     if (name === 'verify_otp') {
       if (!session.pending) return needVerified;

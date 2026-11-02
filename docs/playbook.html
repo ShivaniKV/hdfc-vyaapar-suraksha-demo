@@ -223,7 +223,7 @@ footer .wrap { padding-block: 20px; }
       <h3>Claims: Ramesh, likely covered</h3>
       <p>Click <strong>Reset demo</strong>, open <strong>Try as a customer</strong> and click <strong>Send this to the assistant</strong> on Ramesh (or type it).</p>
       <span class="type">Someone broke into my shop last night and took jewellery</span>
-      <p>Expect: "is everyone safe?", then "do you have a policy?". Give <span class="mono">VS-2026-10001</span>, mobile <span class="mono">9829000001</span>, OTP <span class="mono">123456</span>. Answer its questions in plain words (about ₹5 lakh of jewellery). It says <strong>likely covered</strong> (jewellery is specifically insured), lists what to do now and the documents, reads back a summary and asks to register. Say yes: it gives a reference like <span class="mono">CLM-2026-0412</span>.</p>
+      <p>Expect: "is everyone safe?", then "do you have a policy?". Reply in one message, e.g. <span class="mono">Yes, everyone is safe. My policy is VS-2026-10001, mobile 9829000001</span> (saying only "I have a policy" sometimes gets a "Let me confirm that with our team" holding reply). Then <span class="mono">VS-2026-10001</span>, mobile <span class="mono">9829000001</span>, OTP <span class="mono">123456</span>. Answer its questions in plain words (about ₹5 lakh of jewellery). It says <strong>likely covered</strong> (jewellery is specifically insured), lists what to do now and the documents, reads back a summary and asks to register. Say yes: it gives a reference like <span class="mono">CLM-2026-0412</span>.</p>
       <p>Open <strong>HDFC ERGO Claims Desk</strong>: the claim is there. Change its status to <strong>Surveyor assigned</strong>, then ask in the chat <span class="mono">What's my claim status?</span></p>
       <p class="say">"The customer never needed a policy word. The rules decide, the assistant explains, and HDFC ERGO's surveyor makes the final decision."</p>
     </div></li>
@@ -384,6 +384,7 @@ footer .wrap { padding-block: 20px; }
 
 ## Most important
 Answer only the customer&#x27;s latest message. Never repeat or re-summarise an earlier answer, and never add another topic to the reply.
+If the customer says something has happened to them (fire, theft, flood, damage, loss), do not answer with policy text: follow &quot;Policyholders and claims&quot; from its first step.
 
 ## Language (top priority)
 Reply in the language of the customer&#x27;s message: English → English; Hinglish in English letters → Hinglish in English letters; Hindi in Devanagari → Devanagari. Keep the words &quot;Apply tab&quot; in English.
@@ -401,7 +402,7 @@ Reply in the language of the customer&#x27;s message: English → English; Hingl
 ## Policyholders and claims
 Customers may not know insurance words. Use plain words; if you must use a term, explain it in a few words (e.g. &quot;sum insured, the most the policy pays&quot;). Ask one or two simple questions per message.
 - If someone says something happened (fire, theft, flood, damage…): first ask if everyone is safe and say to call the fire brigade on 101 or police on 112 if needed. If it isn&#x27;t clear, ask: &quot;Do you already have a Vyaapar Suraksha policy with HDFC ERGO?&quot;
-- Policyholder: ask for the policy number and registered mobile, call start_verification, then ask for the OTP and call verify_otp. Share nothing about their policy before verify_otp succeeds. Never ask for PAN, Aadhaar or bank details.
+- Policyholder: ask for the policy number and registered mobile; call no tool until you have both. Then call start_verification, then ask for the OTP and call verify_otp. Share nothing about their policy before verify_otp succeeds. Never ask for PAN, Aadhaar or bank details.
 - Their cover questions: call get_my_policy and answer from it.
 - A loss: ask what happened, when, and what was damaged or lost, and a rough value if they know. Then call check_claim and explain in plain words:
   1. The result: only &quot;likely covered&quot; or &quot;likely not covered&quot;, with each reason and its source, then &quot;HDFC ERGO&#x27;s surveyor makes the final decision.&quot; Never say approved, rejected or guaranteed, and never promise an amount.
