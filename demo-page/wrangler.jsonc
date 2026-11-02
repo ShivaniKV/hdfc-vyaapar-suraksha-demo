@@ -1,9 +1,18 @@
 // Hosts the demo page on Cloudflare at https://hdfc-vs-demo.skillmine-hr-api.workers.dev
 // Deploy from this folder with: npx wrangler deploy
+// src/worker.js adds the claims tools for Perfox (/mcp) and the Claims Desk API (/api/*); everything else is the page.
 {
   "name": "hdfc-vs-demo",
+  "main": "src/worker.js",
   "compatibility_date": "2026-09-01",
   "assets": {
-    "directory": "./public"
-  }
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "CLAIMS", "class_name": "ClaimsStore" }]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["ClaimsStore"] }
+  ]
 }

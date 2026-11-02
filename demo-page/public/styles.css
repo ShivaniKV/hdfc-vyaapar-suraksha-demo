@@ -187,3 +187,28 @@ legend { padding: 0 6px; font-weight: 700; }
   .top, .tabs { padding-left: 16px; padding-right: 16px; }
   main { padding: 16px; }
 }
+
+/* Try as a customer, and the HDFC ERGO Claims Desk */
+.muted { color: var(--muted); }
+.ok { color: #1a7f37; font-weight: 600; }
+.bad { color: var(--accent); font-weight: 600; }
+.customer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.customer h3 { margin: 0 0 2px; font-size: 16px; }
+.customer p { margin: 0 0 10px; font-size: 14px; }
+.customer dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0 0 10px; font-size: 14px; }
+.customer dt { color: var(--muted); }
+.customer dd { margin: 0; font-weight: 600; font-family: ui-monospace, Consolas, monospace; }
+.story { font-style: italic; }
+.claim { margin-bottom: 12px; }
+.claim p { margin: 4px 0; font-size: 15px; }
+.claim ul { margin: 6px 0; padding-left: 20px; font-size: 14px; }
+.claim-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.claim-head .muted { margin-left: auto; font-size: 13px; }
+.pill { padding: 2px 10px; font-size: 13px; font-weight: 600; border-radius: 999px; }
+.pill.likely_covered { color: #1a7f37; background: #e6f4ea; }
+.pill.likely_not_covered { color: var(--accent); background: var(--accent-soft); }
+.pill.needs_review { color: #8a5a00; background: #fff4d6; }
+.status { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 14px; font-weight: 600; }
+.status select { padding: 6px 8px; font: inherit; font-weight: 400; border: 1px solid #c9ced8; border-radius: 6px; }
+.callbacks { margin: 0; padding-left: 20px; font-size: 15px; }
+.callbacks li { margin-bottom: 8px; }

@@ -284,7 +284,7 @@ async function sendToChat(message) {
     send = root?.querySelector('button[aria-label="Send"]');
     if (!(box && send)) await new Promise(r => setTimeout(r, 200));
   }
-  if (!box || !send) { $('#form-msg').textContent = 'Open the chat, then press Send again.'; return; }
+  if (!box || !send) { document.querySelectorAll('#form-msg, #customer-msg').forEach(m => { m.textContent = 'Open the chat, then try again.'; }); return; }
   Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(box, message);
   box.dispatchEvent(new Event('input', { bubbles: true }));
   setTimeout(() => send.click(), 100);
@@ -416,8 +416,89 @@ Perfox('on', 'message:sent', ({ text }) => {
   if (r) { r.checked = true; renderAddons(); }
 });
 
-// Reset: forget the conversation in this browser and start again from a clean page.
-document.getElementById('reset').addEventListener('click', () => {
+// ---------- Try as a customer, and HDFC ERGO Claims Desk (data from src/worker.js) ----------
+const RESULT = { likely_covered: 'Likely covered', likely_not_covered: 'Likely not covered', needs_review: 'Needs review' };
+const when = iso => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+let deskTimer;
+
+async function loadClaims() {
+  const r = await fetch('/api/state');
+  if (!r.ok) throw new Error('Claims service unavailable');
+  return r.json();
+}
+
+async function renderCustomers() {
+  const { customers } = await loadClaims();
+  $('#customer-cards').innerHTML = customers.map((c, i) => `
+    <div class="card customer">
+      <h3>${esc(c.name)}</h3>
+      <p class="muted">${esc(c.business)}, ${esc(c.city)} · ${esc(c.kind)} · <span class="${c.active ? 'ok' : 'bad'}">${c.active ? 'Active' : 'Expired ' + esc(c.end)}</span></p>
+      <dl>
+        <dt>Policy number</dt><dd>${esc(c.policy)}</dd>
+        <dt>Mobile</dt><dd>${esc(c.mobile)}</dd>
+        <dt>OTP</dt><dd>${esc(c.otp)}</dd>
+      </dl>
+      <p class="story">“${esc(c.story)}”</p>
+      <button type="button" class="primary" data-story="${i}">Send this to the assistant</button>
+    </div>`).join('') + `
+    <div class="card customer">
+      <h3>Priya Nair</h3>
+      <p class="muted">New bakery, Kochi · no policy yet</p>
+      <p class="story">“I'm opening a bakery. What insurance do I need?”</p>
+      <button type="button" class="primary" data-story="new">Send this to the assistant</button>
+    </div>
+    <p id="customer-msg" class="form-msg"></p>`;
+  $('#customer-cards').onclick = e => {
+    const b = e.target.closest('[data-story]');
+    if (!b) return;
+    sendToChat(b.dataset.story === 'new' ? "I'm opening a bakery. What insurance do I need?" : customers[b.dataset.story].story);
+  };
+}
+
+async function renderDesk() {
+  const { claims, callbacks, statuses } = await loadClaims();
+  $('#desk-claims').innerHTML = claims.length ? claims.map(c => `
+    <div class="card claim">
+      <div class="claim-head">
+        <strong>${esc(c.reference)}</strong>
+        <span class="pill ${c.result}">${RESULT[c.result] || esc(c.result)}</span>
+        <span class="muted">${when(c.registered_at)}</span>
+      </div>
+      <p><strong>${esc(c.customer)}</strong> · ${esc(c.business)} · ${esc(c.policy)}</p>
+      <p>${esc(c.eventLabel)} on ${esc(c.incident_date)}${c.items.length ? ' · ' + esc(c.items.join(', ').replace(/_/g, ' ')) : ''}${c.estimated_loss ? ' · about ₹' + Number(c.estimated_loss).toLocaleString('en-IN') : ''}</p>
+      ${c.description ? `<p class="muted">“${esc(c.description)}”</p>` : ''}
+      ${c.reasons.length ? `<ul>${c.reasons.map(r => `<li>${esc(r.reason)} <span class="muted">(${esc(r.source)})</span></li>`).join('')}</ul>` : ''}
+      ${c.notes.length ? `<ul>${c.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+      <label class="status">Status
+        <select data-ref="${esc(c.reference)}">${statuses.map(s => `<option ${s === c.status ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
+      </label>
+    </div>`).join('') : '<p class="muted">No claims yet. Register one in the chat as Ramesh, Sunita or Imran.</p>';
+  $('#desk-callbacks').innerHTML = callbacks.length ? `<ul class="callbacks">${callbacks.map(b => `
+    <li><strong>${esc(b.reference)}</strong> · ${esc(b.customer)} (${esc(b.policy)}) · mobile ${esc(b.mobile)} · ${when(b.at)}<br>${esc(b.reason)}</li>`).join('')}</ul>`
+    : '<p class="muted">No call-back requests.</p>';
+}
+
+$('#desk-claims').addEventListener('change', async e => {
+  const sel = e.target.closest('select[data-ref]');
+  if (!sel) return;
+  await fetch(`/api/claims/${sel.dataset.ref}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: sel.value }) });
+  renderDesk();
+});
+
+// Load a tab's data when it opens; the desk refreshes every few seconds while it is open, so new claims appear by themselves.
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  clearInterval(deskTimer);
+  const fail = el => () => { $(el).innerHTML = '<p class="muted">The claims service is not available on this server.</p>'; };
+  if (t.dataset.view === 'customers') renderCustomers().catch(fail('#customer-cards'));
+  if (t.dataset.view === 'desk') {
+    renderDesk().catch(fail('#desk-claims'));
+    deskTimer = setInterval(() => { if (!document.activeElement?.matches('select[data-ref]')) renderDesk().catch(() => {}); }, 4000);
+  }
+}));
+
+// Reset: forget the conversation in this browser, put the made-up policy records back, clear all claims, and start again from a clean page.
+document.getElementById('reset').addEventListener('click', async () => {
+  await fetch('/api/reset', { method: 'POST' }).catch(() => {});
   Perfox('shutdown');
   Object.keys(localStorage)
     .filter(k => k.startsWith('perfox_widget_conv_'))

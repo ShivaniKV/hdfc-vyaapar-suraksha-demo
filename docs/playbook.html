@@ -207,7 +207,7 @@ footer .wrap { padding-block: 20px; }
     <li><div>
       <h3>Knows its boundaries</h3>
       <span class="type">What is my claim status? My policy number is 2345678</span>
-      <p>Expect: it can't see personal policies and gives the HDFC ERGO phone, WhatsApp and website.</p>
+      <p>Expect: it asks for the registered mobile to verify; the made-up number isn't found, so it gives the HDFC ERGO phone, WhatsApp and website. It shares nothing without verification.</p>
     </div></li>
     <li><div>
       <h3>Apply with help</h3>
@@ -218,6 +218,27 @@ footer .wrap { padding-block: 20px; }
       <p>To show the paper route instead, click <strong>Reset demo</strong>, type <span class="mono">I want to apply for this policy</span>, then <span class="mono">2</span>: the chat shows HDFC ERGO's blank proposal form as a PDF card with Open and Download.</p>
       <p>Then type <span class="mono">my PAN is ABCDE1234F</span> — it refuses and asks to submit PAN directly to HDFC ERGO.</p>
       <p class="say">"The form follows your proposal form, asks only what applies, and never collects PAN, KYC or bank details."</p>
+    </div></li>
+    <li><div>
+      <h3>Claims: Ramesh, likely covered</h3>
+      <p>Click <strong>Reset demo</strong>, open <strong>Try as a customer</strong> and click <strong>Send this to the assistant</strong> on Ramesh (or type it).</p>
+      <span class="type">Someone broke into my shop last night and took jewellery</span>
+      <p>Expect: "is everyone safe?", then "do you have a policy?". Give <span class="mono">VS-2026-10001</span>, mobile <span class="mono">9829000001</span>, OTP <span class="mono">123456</span>. Answer its questions in plain words (about ₹5 lakh of jewellery). It says <strong>likely covered</strong> (jewellery is specifically insured), lists what to do now and the documents, reads back a summary and asks to register. Say yes: it gives a reference like <span class="mono">CLM-2026-0412</span>.</p>
+      <p>Open <strong>HDFC ERGO Claims Desk</strong>: the claim is there. Change its status to <strong>Surveyor assigned</strong>, then ask in the chat <span class="mono">What's my claim status?</span></p>
+      <p class="say">"The customer never needed a policy word. The rules decide, the assistant explains, and HDFC ERGO's surveyor makes the final decision."</p>
+    </div></li>
+    <li><div>
+      <h3>Claims: Sunita, likely not covered</h3>
+      <p>Click <strong>Reset demo</strong>, then as Sunita (<span class="mono">VS-2026-10002</span>, <span class="mono">9835000002</span>, OTP <span class="mono">123456</span>):</p>
+      <span class="type">Baarish ka paani dukaan mein aa gaya, saara stock kharab ho gaya</span>
+      <p>Expect (in Hinglish): <strong>likely not covered</strong>, because under Named Perils, storm and flood need the add-on she didn't take (Policy Wordings page 4). It still offers to register the claim, with the reason shown on the Claims Desk.</p>
+      <p class="say">"It is honest about cover but never blocks a customer from reporting a loss."</p>
+    </div></li>
+    <li><div>
+      <h3>Claims: Imran, policy expired</h3>
+      <p>Click <strong>Reset demo</strong>, then as Imran (<span class="mono">VS-2025-10003</span>, <span class="mono">9822000003</span>, OTP <span class="mono">123456</span>):</p>
+      <span class="type">There was a fire in my godown, what do I do?</span>
+      <p>Expect: safety first (fire brigade 101), then <strong>likely not covered</strong> because the policy ended on 30 Sep 2026, with the contacts. Ask <span class="mono">I want to talk to someone</span>: it raises a call-back that appears on the Claims Desk.</p>
     </div></li>
     <li><div>
       <h3>Optional: voice</h3>
@@ -239,14 +260,22 @@ footer .wrap { padding-block: 20px; }
     <li><input type="checkbox" id="c4"><label for="c4">Browser zoom at 100% on a wide window, so the Policy Guide shows beside the chat</label></li>
     <li><input type="checkbox" id="c5"><label for="c5">Allow the microphone if you plan to show voice</label></li>
     <li><input type="checkbox" id="c6"><label for="c6">Keep this playbook open in another tab for the demo script</label></li>
+    <li><input type="checkbox" id="c8"><label for="c8">Perfox → Connect → Integrations: <strong>Vyaapar Suraksha Claims</strong> shows <strong>Healthy</strong> with 7 tools, and it is attached to the agent</label></li>
     <li><input type="checkbox" id="c7"><label for="c7">During the demo, click <strong>Reset demo</strong> before each new business example ("I run a …")</label></li>
   </ul>
   <h3>How the reset works</h3>
-  <p><strong>Reset demo</strong> logs the widget out, deletes the saved conversation from the browser and reloads the page. The agent is set to <em>remember only the current conversation</em>, so a new chat starts with no memory of earlier demos. Pressing reset never changes anything in Perfox.</p>
+  <p><strong>Reset demo</strong> logs the widget out, deletes the saved conversation from the browser, puts the made-up policy records back, clears every claim and call-back on the Claims Desk, and reloads the page. The agent is set to <em>remember only the current conversation</em>, so a new chat starts with no memory of earlier demos. Pressing reset never changes anything in Perfox.</p>
+  <h3>Claims set-up in Perfox</h3>
+  <ol>
+    <li><strong>Connect → Integrations → Add custom server.</strong> Name <span class="mono">Vyaapar Suraksha Claims</span>; URL <span class="mono">https://hdfc-vs-demo.skillmine-hr-api.workers.dev/mcp</span>; Transport <em>HTTP (Streamable)</em>; Auth <em>None</em>; <strong>Cache TTL 0</strong> (status and OTP answers must never be reused); Timeout 30000. Expect 7 tools.</li>
+    <li><strong>Agent canvas:</strong> + under the AI Agent's Integration port → Integration sub-node → pick <em>Vyaapar Suraksha Claims</em> → All actions.</li>
+    <li>Paste the chat prompt below into the <strong>Common</strong> tab and click <strong>Activate</strong>.</li>
+  </ol>
+  <p>Demo page with claims: Cloudflare version <span class="mono">5b3e5432-a25b-4ebf-b6e7-9efe28912087</span>. The made-up customers and rules are in <span class="mono">demo-page/src/worker.js</span>; the design is in <span class="mono">docs/claims-design.md</span>.</p>
   <h3>Safe baseline (29 Oct 2026)</h3>
   <p>This version was checked end to end and is the one to fall back to. The project folder holds <strong>Baseline 2026-10-29.zip</strong>: the chat prompt, the voice prompt, the demo page and a README with these steps and every Perfox setting.</p>
   <ul>
-    <li><strong>Demo page:</strong> live Cloudflare version <span class="mono">fce85116-6210-4f50-b0d8-879242f51e84</span>. To roll back, run <span class="mono">npx wrangler@4 rollback fce85116-6210-4f50-b0d8-879242f51e84</span> in the demo-page folder.</li>
+    <li><strong>Demo page:</strong> live Cloudflare version <span class="mono">fce85116-6210-4f50-b0d8-879242f51e84</span>. To roll back, run <span class="mono">npx wrangler@4 rollback fce85116-6210-4f50-b0d8-879242f51e84</span> in the demo-page folder. This removes the claims tabs and tools.</li>
     <li><strong>Assistant:</strong> in Perfox → AI Agent → Personality, with <em>Channel-specific prompts</em> on, paste the chat prompt below into the <strong>Common</strong> tab and the voice prompt from the zip into the <strong>Web Voice</strong> tab.</li>
     <li><strong>Perfox settings:</strong> as in the Agent canvas table above. The knowledge folder holds only HDFC ERGO's 4 documents.</li>
   </ul>
@@ -283,7 +312,8 @@ footer .wrap { padding-block: 20px; }
       <tr><td>6</td><td>PAN offered</td><td>Refused with the agreed wording</td><td><span class="pill ok">Pass</span></td><td class="num">~5 s</td></tr>
       <tr><td>7</td><td>Jewellery shop sections</td><td>Plain list, no recommending; a verified exclusion appears as a "Note:" only where it fits the business (jewellery shop: Sections I and II notes; medical store: none), then one closing line about other exclusions</td><td><span class="pill ok">Pass</span></td><td class="num">5 s</td></tr>
       <tr><td>8</td><td>Hinglish theft claim</td><td>Hinglish; police report immediately, claim form within 30 days, keep evidence</td><td><span class="pill ok">Pass</span></td><td class="num">~15 s</td></tr>
-      <tr><td>9</td><td>Read in the policy / What's this?</td><td>Opens HDFC ERGO's PDF at the page with the sentence highlighted; 52 references checked, all 4 documents</td><td><span class="pill ok">Pass</span></td><td class="num">—</td></tr>      <tr><td>10</td><td>"Is flood covered?"</td><td>Says storm and flood is an add-on under Named Perils; Source link opens Policy Wordings page 4 in the viewer</td><td><span class="pill ok">Pass</span></td><td class="num">3.6 s</td></tr>
+      <tr><td>9</td><td>Read in the policy / What's this?</td><td>Opens HDFC ERGO's PDF at the page with the sentence highlighted; 52 references checked, all 4 documents</td><td><span class="pill ok">Pass</span></td><td class="num">—</td></tr>
+      <tr><td>10</td><td>"Is flood covered?"</td><td>Says storm and flood is an add-on under Named Perils; Source link opens Policy Wordings page 4 in the viewer</td><td><span class="pill ok">Pass</span></td><td class="num">3.6 s</td></tr>
 
     </table>
   </div>
@@ -362,11 +392,23 @@ Reply in the language of the customer&#x27;s message: English → English; Hingl
 - If they name a different business, list sections for that business only.
 - Answer only from the knowledge base; if documents differ, the Policy Wordings wins. If it isn&#x27;t there, say so and give the contacts. Never invent an exclusion, price or number.
 - State only what the cited passage says; never carry a detail over from another rule or section. Link an exclusion to a section only if it sits under that section&#x27;s heading.
-- When asked what a section excludes, list the exclusions under that section&#x27;s own heading, not the general exclusions.
+- When asked what a section excludes, list every exclusion under that section&#x27;s own heading in the Policy Wordings, not the general exclusions; the Verified exclusions below are examples, not the full list.
 - When cover depends on an add-on or option, say so in the answer: under Named Perils, storm and flood and earthquake are covered only if added; under All Risk they are covered unless excluded. Before saying anything is covered, check that section&#x27;s exclusions, especially for jewellery, gold and money.
-- You cannot see any customer&#x27;s policy, claim or payments; give the contacts.
+- A customer&#x27;s own policy and claims come only from the tools, after verification (see Policyholders). Never guess them; for payments, give the contacts.
 - Explain, never recommend: never say which sections to buy or skip or suggest other products; never use &quot;recommend&quot;, &quot;suggest&quot; or &quot;consider&quot;; label sections only Mandatory (Section I) or Optional.
 - &quot;Which sections do I need?&quot;: say Section I is mandatory and the other 20 optional. Under &quot;Sections that relate to your business&quot;, list the related sections one line each, using exactly the meanings in the Reference. Add a section&#x27;s Verified exclusion after &quot;Note:&quot; only when the excluded items relate to what this business keeps (e.g. jewellery for a jewellery shop); mention no other exclusions. Then write once: &quot;Each section has its own exclusions in the Policy Wordings; ask me about any section.&quot; End with: &quot;To decide what suits your business, please speak to an HDFC ERGO representative.&quot;
+
+## Policyholders and claims
+Customers may not know insurance words. Use plain words; if you must use a term, explain it in a few words (e.g. &quot;sum insured, the most the policy pays&quot;). Ask one or two simple questions per message.
+- If someone says something happened (fire, theft, flood, damage…): first ask if everyone is safe and say to call the fire brigade on 101 or police on 112 if needed. If it isn&#x27;t clear, ask: &quot;Do you already have a Vyaapar Suraksha policy with HDFC ERGO?&quot;
+- Policyholder: ask for the policy number and registered mobile, call start_verification, then ask for the OTP and call verify_otp. Share nothing about their policy before verify_otp succeeds. Never ask for PAN, Aadhaar or bank details.
+- Their cover questions: call get_my_policy and answer from it.
+- A loss: ask what happened, when, and what was damaged or lost, and a rough value if they know. Then call check_claim and explain in plain words:
+  1. The result: only &quot;likely covered&quot; or &quot;likely not covered&quot;, with each reason and its source, then &quot;HDFC ERGO&#x27;s surveyor makes the final decision.&quot; Never say approved, rejected or guaranteed, and never promise an amount.
+  2. What to do now and the documents, from the tool, as short bullets.
+  Then read back a one-line summary and ask: &quot;Shall I register this claim with HDFC ERGO?&quot; On yes, call register_claim, even if likely not covered, and give the claim reference.
+- Claim status: call get_claim_status. If they want to speak to a person: call request_callback.
+- Use only what the tools return for their policy and claims; translate it into the customer&#x27;s language.
 
 ## Format
 - No greeting; go straight to the answer. Short, plain words; bullets for lists. Say &quot;HDFC ERGO&quot;, never &quot;we&quot;.
@@ -440,7 +482,7 @@ Verified exclusions:
     <li><span class="pill warn">To do</span> WhatsApp and phone channels: need HDFC ERGO's WhatsApp number and telephony.</li>
     <li><span class="pill warn">To confirm</span> Where customers submit the completed proposal form (email, branch or agent) — to be asked of HDFC ERGO.</li>
     <li><span class="pill warn">Later</span> Demo date and final test question list with the manager.</li>
-    <li><span class="pill warn">Ideas for v2</span> Pre-filled proposal PDF, secure upload of the filled form, human handoff, policy and claim lookup, interaction summaries.</li>
+    <li><span class="pill warn">Ideas for v2</span> Secure upload of the filled form and claim photos, live human handoff, WhatsApp and phone claims, interaction summaries.</li>
   </ul>
 </section>
 
