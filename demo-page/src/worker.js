@@ -145,8 +145,6 @@ const DO_NOW = [
   'Take photos and keep bills, invoices and stock records.',
 ];
 
-const WORDING = 'Say "likely covered" or "likely not covered", never approved, rejected or guaranteed, and never promise an amount. Always add: "HDFC ERGO\'s surveyor makes the final decision."';
-
 // ---------- Tools the agent can call ----------
 const TOOLS = [
   {
@@ -316,9 +314,10 @@ export class ClaimsStore extends DurableObject {
     if (name === 'check_claim') {
       const r = checkClaim(me, a);
       const label = r.result === 'likely_covered' ? 'likely covered' : r.result === 'likely_not_covered' ? 'likely not covered' : 'needs review by HDFC ERGO';
+      // Kept short: every extra word is re-sent to the model on each later step of the turn.
       return {
-        ok: true, ...r, what_to_do_now: DO_NOW, documents: documentsFor(r.event), wording: WORDING, contacts: '022 6158 2020 or 022 6234 6234, WhatsApp 8169 500 500',
-        say: `This check is complete; answer the customer now, in their language. Say the loss is ${label}${r.reasons.length ? ' because: ' + r.reasons.map(x => `${x.reason} (${x.source})`).join(' ') : ''} Then: "HDFC ERGO's surveyor makes the final decision." Then the what to do now steps and documents as short bullets, then ask if they want to register the claim.`,
+        ok: true, result: r.result, incident_date: r.incident_date, notes: r.notes, what_to_do_now: DO_NOW, documents: documentsFor(r.event),
+        say: `This check is complete; answer the customer now, in their language. Say the loss is ${label}${r.reasons.length ? ' because: ' + r.reasons.map(x => `${x.reason} (${x.source})`).join(' ') : '.'} Then: "HDFC ERGO's surveyor makes the final decision." Then the what to do now steps and documents as short bullets, then ask if they want to register the claim.`,
       };
     }
     if (name === 'register_claim') {
@@ -331,7 +330,7 @@ export class ClaimsStore extends DurableObject {
         status: 'Registered', registered_at: now, history: [{ status: 'Registered', at: now }],
       });
       await this.save(s);
-      return { ok: true, claim_reference: reference, result: r.result, reasons: r.reasons, next: NEXT_STEP.Registered, wording: WORDING, say: `Give the customer the claim reference ${reference}. Tell them they can ask "What's my claim status?" here any time.` };
+      return { ok: true, claim_reference: reference, result: r.result, next: NEXT_STEP.Registered, say: `Give the customer the claim reference ${reference}. Tell them they can ask "What's my claim status?" here any time.` };
     }
     if (name === 'get_claim_status') {
       const mine = s.claims.filter(c => c.policy === me.policy && (!a.claim_reference || clean(c.reference) === clean(a.claim_reference)));
