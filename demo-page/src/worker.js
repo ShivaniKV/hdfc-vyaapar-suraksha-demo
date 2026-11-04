@@ -215,7 +215,33 @@ const TOOLS = [
 const clean = s => String(s || '').replace(/[^0-9a-z]/gi, '').toUpperCase();
 // The three made-up customers plus any policy issued from a proposal on the HDFC ERGO Desk (cleared by Reset).
 const allCustomers = s => [...CUSTOMERS, ...(s.policies || [])];
-const findCustomer = (policy, s) => allCustomers(s).find(c => clean(c.policy) === clean(policy));
+// On voice calls numbers can arrive as words ("nine eight two nine…", "double zero", "ek do teen") or Devanagari digits.
+const WORD_DIGITS = {
+  zero: 0, oh: 0, o: 0, one: 1, two: 2, to: 2, too: 2, three: 3, four: 4, for: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
+  shunya: 0, sunya: 0, ek: 1, do: 2, teen: 3, tin: 3, char: 4, chaar: 4, paanch: 5, panch: 5, chhe: 6, che: 6, chah: 6, saat: 7, sat: 7, aath: 8, ath: 8, nau: 9, no: 9,
+  '\u0936\u0942\u0928\u094d\u092f': 0, '\u090f\u0915': 1, '\u0926\u094b': 2, '\u0924\u0940\u0928': 3, '\u091a\u093e\u0930': 4, '\u092a\u093e\u0902\u091a': 5, '\u092a\u093e\u0901\u091a': 5, '\u091b\u0939': 6, '\u091b\u0903': 6, '\u0938\u093e\u0924': 7, '\u0906\u0920': 8, '\u0928\u094c': 9,
+};
+function digitsOf(v) {
+  const text = String(v ?? '').toLowerCase().replace(/[\u0966-\u096f]/g, d => d.charCodeAt(0) - 0x966);
+  if (/^[\d\s().+-]*$/.test(text)) return text.replace(/\D/g, '');
+  let out = '', repeat = 1;
+  for (const w of text.split(/[^0-9a-z\u0900-\u097f]+/).filter(Boolean)) {
+    if (w === 'double') { repeat = 2; continue; }
+    if (w === 'triple') { repeat = 3; continue; }
+    const d = /^\d+$/.test(w) ? w : WORD_DIGITS[w] !== undefined ? String(WORD_DIGITS[w]) : '';
+    if (d) out += d.length === 1 ? d.repeat(repeat) : d;
+    repeat = 1;
+  }
+  return out;
+}
+// Match the policy number exactly, or by its digits alone (speech often loses or garbles the "VS").
+const findCustomer = (policy, s) => {
+  const d = digitsOf(policy);
+  const all = allCustomers(s);
+  // Last resort: the last five digits (10001, 10002…) are unique in the demo, and the mobile must still match.
+  return all.find(c => clean(c.policy) === clean(policy) || (d.length >= 9 && c.policy.replace(/\D/g, '') === d))
+    || (d.length >= 5 ? all.find(c => c.policy.endsWith(d.slice(-5))) : undefined);
+};
 
 // A proposal sent from the Apply tab, kept to the fields a policy needs.
 function readProposal(p) {
@@ -331,9 +357,9 @@ export class ClaimsStore extends DurableObject {
 
     if (name === 'start_verification') {
       const c = findCustomer(a.policy_number, s);
-      const digits = String(a.mobile || '').replace(/\D/g, '');
+      const digits = digitsOf(a.mobile);
       // The model sometimes sends the OTP here instead of to verify_otp, glued to the mobile or in an otp field.
-      const otp = digits.length === 16 && digits.slice(0, 10) === c?.mobile ? digits.slice(10) : String(a.otp || '').replace(/\D/g, '');
+      const otp = digits.length === 16 && digits.slice(0, 10) === c?.mobile ? digits.slice(10) : digitsOf(a.otp);
       if (c && session.pending === c.policy && otp) return this.call('verify_otp', { otp }, conv);
       const mobile = otp && digits.length === 16 ? digits.slice(0, 10) : digits.slice(-10);
       if (!c || c.mobile !== mobile) return { ok: false, say: 'No policy matches that policy number and mobile number. Ask the customer to check both, or contact HDFC ERGO on 022 6158 2020 / 022 6234 6234.' };
@@ -344,7 +370,7 @@ export class ClaimsStore extends DurableObject {
     if (name === 'verify_otp') {
       if (!session.pending && me) return { ok: true, first_name: me.name.split(' ')[0], say: 'Already verified. Continue with what the customer asked.' };
       if (!session.pending) return needVerified;
-      if (String(a.otp || '').replace(/\D/g, '') !== DEMO_OTP) {
+      if (digitsOf(a.otp) !== DEMO_OTP) {
         session.tries = (session.tries || 0) + 1;
         if (session.tries >= 3) delete session.pending;
         await this.save(s);
@@ -371,7 +397,7 @@ export class ClaimsStore extends DurableObject {
       // Kept short: every extra word is re-sent to the model on each later step of the turn.
       return {
         ok: true, result: r.result, incident_date: r.incident_date, notes: r.notes, what_to_do_now: DO_NOW, documents: documentsFor(r.event),
-        say: `This check is complete; answer the customer now, in their language. Say the loss is ${label}${r.reasons.length ? ' because: ' + r.reasons.map(x => `${x.reason} (${x.source})`).join(' ') : '.'} Then: "HDFC ERGO's surveyor makes the final decision." Then the what to do now steps and documents as short bullets, then ask if they want to register the claim.`,
+        say: `This check is complete; answer the customer now, in their language. Say the loss is ${label}${r.reasons.length ? ' because: ' + r.reasons.map(x => `${x.reason} (${x.source})`).join(' ') : '.'} Then: "HDFC ERGO's surveyor makes the final decision." Then the what to do now steps and documents, briefly (short bullets in chat; on a voice call, say the two or three most important), then ask if they want to register the claim.`,
       };
     }
     if (name === 'register_claim') {
