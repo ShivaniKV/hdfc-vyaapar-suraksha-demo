@@ -43,7 +43,10 @@ const NEXT_STEP = {
 };
 const SECTION_NAMES = {
   I: 'Property Damage', II: 'Burglary and House Breaking', III: 'Breakdown of Electrical and Mechanical Appliance',
-  IV: 'Electronic Equipment', XI: 'Money',
+  IV: 'Electronic Equipment', V: 'Portable Electronic Equipment', VI: 'Boiler and Pressure Plant', VII: 'Business Interruption',
+  VIII: 'Machinery Loss of Profit', IX: 'Plate Glass and Sanitary Fittings', X: 'Neon Sign / Glow Sign / Hoarding', XI: 'Money',
+  XII: 'Baggage', XIII: 'Marine Transit', XIV: 'Cyber Risk', XV: 'Public Liability', XVI: 'Event Liability',
+  XVII: 'Infidelity / Dishonesty of Employees', XVIII: "Workmen's Compensation", XIX: 'Agri Pump Set', XX: 'Agricultural Equipment', XXI: 'Pedal Cycle',
 };
 
 // ---------- Eligibility rules (code decides; the assistant only explains) ----------
@@ -80,7 +83,7 @@ function checkClaim(c, a) {
 
   // 1. Policy active on the incident date.
   if (date < c.start || date > c.end) {
-    fail(`The policy was not active on ${date}. It ran from ${c.start} to ${c.end}.`, 'Policy schedule');
+    fail(`The policy was not active on ${date}. Its period is ${c.start} to ${c.end}.`, 'Policy schedule');
   }
   // 2. Event covered by their kind of Section I.
   if (event === 'storm_flood' && c.kind === 'Named Perils' && !c.addons.includes('storm_flood')) {
@@ -91,10 +94,10 @@ function checkClaim(c, a) {
   }
   // 3. Section taken.
   const section = SECTION_FOR[event];
-  if (section && !c.sections[section]) {
+  if (section && !(section in c.sections)) {
     fail(`This needs Section ${section} (${SECTION_NAMES[section] || ''}), which is not on this policy.`, 'Policy schedule');
   }
-  if (event === 'burglary_theft' && items.includes('cash') && !c.sections.XI) {
+  if (event === 'burglary_theft' && items.includes('cash') && !('XI' in c.sections)) {
     fail('Stolen cash needs Section XI (Money), which is not on this policy.', 'Policy schedule');
   }
   // 4. Section exclusions.
@@ -210,11 +213,30 @@ const TOOLS = [
 ];
 
 const clean = s => String(s || '').replace(/[^0-9a-z]/gi, '').toUpperCase();
-const findCustomer = policy => CUSTOMERS.find(c => clean(c.policy) === clean(policy));
+// The three made-up customers plus any policy issued from a proposal on the HDFC ERGO Desk (cleared by Reset).
+const allCustomers = s => [...CUSTOMERS, ...(s.policies || [])];
+const findCustomer = (policy, s) => allCustomers(s).find(c => clean(c.policy) === clean(policy));
+
+// A proposal sent from the Apply tab, kept to the fields a policy needs.
+function readProposal(p) {
+  const mobile = String(p.mobile || '').replace(/\D/g, '').slice(-10);
+  if (!String(p.name || '').trim() || mobile.length !== 10) return null;
+  const sections = {};
+  for (const [k, v] of Object.entries(p.sections || {})) if (/^[IVX]+$/.test(k)) sections[k] = Number(v) > 0 ? Number(v) : null;
+  sections.I = Number(p.sections?.I) > 0 ? Number(p.sections.I) : null;
+  return {
+    name: String(p.name).trim().slice(0, 80), business: String(p.business || 'Business').slice(0, 60), city: String(p.city || '').slice(0, 60),
+    mobile, kind: p.kind === 'All Risk' ? 'All Risk' : 'Named Perils',
+    addons: (p.addons || []).filter(a => ['storm_flood', 'earthquake'].includes(a)),
+    sections, start: /^\d{4}-\d{2}-\d{2}$/.test(p.start || '') ? p.start : null, years: Math.min(5, Math.max(1, parseInt(p.tenure) || 1)),
+  };
+}
 
 export class ClaimsStore extends DurableObject {
   async state() {
-    return (await this.ctx.storage.get('state')) || { claims: [], callbacks: [], sessions: {}, next: 412 };
+    const s = (await this.ctx.storage.get('state')) || { claims: [], callbacks: [], sessions: {}, next: 412 };
+    s.proposals ||= []; s.policies ||= [];
+    return s;
   }
   save(s) { return this.ctx.storage.put('state', s); }
 
@@ -224,13 +246,45 @@ export class ClaimsStore extends DurableObject {
     if (url.pathname === '/api/state' && request.method === 'GET') {
       const s = await this.state();
       return json({
-        customers: CUSTOMERS.map(c => ({ name: c.name, business: c.business, city: c.city, policy: c.policy, mobile: c.mobile, otp: DEMO_OTP, kind: c.kind, end: c.end, story: c.story, active: today() <= c.end })),
-        claims: s.claims, callbacks: s.callbacks, statuses: STATUSES,
+        customers: allCustomers(s).map(c => ({ name: c.name, business: c.business, city: c.city, policy: c.policy, mobile: c.mobile, otp: DEMO_OTP, kind: c.kind, end: c.end, story: c.story, issued: !!c.proposal, active: today() <= c.end })),
+        claims: s.claims, callbacks: s.callbacks, statuses: STATUSES, proposals: s.proposals,
       });
     }
     if (url.pathname === '/api/reset' && request.method === 'POST') {
       await this.ctx.storage.deleteAll();
       return json({ ok: true });
+    }
+    if (url.pathname === '/api/proposals' && request.method === 'POST') {
+      const p = readProposal(await request.json().catch(() => ({})));
+      if (!p) return json({ error: 'A name and a 10-digit mobile are needed' }, 400);
+      const s = await this.state();
+      const reference = `PRP-2026-${String(101 + s.proposals.length).padStart(4, '0')}`;
+      s.proposals.unshift({ reference, ...p, status: 'Proposal received', at: new Date().toISOString() });
+      await this.save(s);
+      return json(s.proposals[0]);
+    }
+    const pr = url.pathname.match(/^\/api\/proposals\/([\w-]+)(?:\/(approve|decline))?$/);
+    if (pr) {
+      const s = await this.state();
+      const p = s.proposals.find(x => x.reference === pr[1]);
+      if (!p) return json({ error: 'No such proposal' }, 404);
+      if (request.method === 'GET') return json(p);
+      if (request.method !== 'POST' || !pr[2] || p.status !== 'Proposal received') return json({ error: 'Only a new proposal can be approved or declined' }, 400);
+      if (pr[2] === 'decline') p.status = 'Not accepted';
+      else {
+        // Approving plays HDFC ERGO accepting the proposal and receiving the premium: a policy is issued from it.
+        const start = p.start && p.start > today() ? p.start : today();
+        const policy = `VS-2026-${10004 + s.policies.length}`;
+        s.policies.push({
+          name: p.name, business: p.business, city: p.city, policy, mobile: p.mobile,
+          start, end: addDays(Number(start.slice(0, 4)) + p.years + start.slice(4), -1), kind: p.kind, addons: p.addons,
+          sections: p.sections, jewelleryInsured: false, story: 'I want to check what my new policy covers', proposal: p.reference,
+        });
+        p.status = 'Policy issued'; p.policy = policy;
+      }
+      p.decided_at = new Date().toISOString();
+      await this.save(s);
+      return json(p);
     }
     const m = url.pathname.match(/^\/api\/claims\/([\w-]+)\/status$/);
     if (m && request.method === 'POST') {
@@ -272,11 +326,11 @@ export class ClaimsStore extends DurableObject {
   async call(name, a, conv) {
     const s = await this.state();
     const session = s.sessions[conv] || (s.sessions[conv] = {});
-    const me = session.verified && findCustomer(session.verified);
+    const me = session.verified && findCustomer(session.verified, s);
     const needVerified = { ok: false, error: 'not_verified', say: 'Ask for the policy number and registered mobile number, then call start_verification.' };
 
     if (name === 'start_verification') {
-      const c = findCustomer(a.policy_number);
+      const c = findCustomer(a.policy_number, s);
       const digits = String(a.mobile || '').replace(/\D/g, '');
       // The model sometimes sends the OTP here instead of to verify_otp, glued to the mobile or in an otp field.
       const otp = digits.length === 16 && digits.slice(0, 10) === c?.mobile ? digits.slice(10) : String(a.otp || '').replace(/\D/g, '');
@@ -298,7 +352,7 @@ export class ClaimsStore extends DurableObject {
       }
       session.verified = session.pending; delete session.pending;
       await this.save(s);
-      const c = findCustomer(session.verified);
+      const c = findCustomer(session.verified, s);
       return { ok: true, first_name: c.name.split(' ')[0], business: c.business, say: 'Verified. Greet them by first name and continue with what they asked.' };
     }
     if (!me) return needVerified;
@@ -308,7 +362,7 @@ export class ClaimsStore extends DurableObject {
         ok: true, policy_number: me.policy, name: me.name, business: `${me.business}, ${me.city}`,
         period: `${me.start} to ${me.end}`, status: today() <= me.end ? 'Active' : `Expired on ${me.end}`,
         section_I_kind: me.kind, add_ons: me.addons.length ? me.addons : 'None (no storm and flood, no earthquake add-on)',
-        sections: Object.entries(me.sections).map(([k, v]) => `Section ${k} ${SECTION_NAMES[k]}: sum insured ${rupees(v)}${k === 'II' ? (me.jewelleryInsured ? ' (jewellery specifically insured)' : ' (jewellery not specifically insured)') : ''}`),
+        sections: Object.entries(me.sections).map(([k, v]) => `Section ${k} ${SECTION_NAMES[k] || ''}: sum insured ${v ? rupees(v) : 'not stated'}${k === 'II' ? (me.jewelleryInsured ? ' (jewellery specifically insured)' : ' (jewellery not specifically insured)') : ''}`),
       };
     }
     if (name === 'check_claim') {

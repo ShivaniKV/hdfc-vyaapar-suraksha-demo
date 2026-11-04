@@ -45,7 +45,7 @@
   <li>Perfox Studio: the agent <b>HDFC-VS Customer Service</b> shows <b>Active</b>, and the workspace has credits.</li>
   <li>Open the demo page and click <b>Reset demo</b> (top right). The chat opens with the greeting.</li>
   <li>Keep the window wide at 100% zoom, so the page and the chat are side by side.</li>
-  <li>Click <b>Reset demo</b> before every new customer or new business example. Reset clears the chat and every claim on the Claims Desk, and brings back the same made-up customers.</li>
+  <li>Click <b>Reset demo</b> before every new customer or new business example. Reset clears the chat and every claim on the HDFC ERGO Desk, and brings back the same made-up customers.</li>
   <li>Type each message <b>one at a time</b> and wait for the reply (about 3 to 10 seconds).</li>
 </ol>
 
@@ -55,7 +55,7 @@
   <tr><td><b>Policy Guide</b></td><td>Named Perils vs All Risk, and the 21 sections. <i>Read in the policy</i> opens HDFC ERGO's own PDF at the exact sentence, highlighted.</td></tr>
   <tr><td><b>Apply</b></td><td>The proposal form, following HDFC ERGO's form. Download it filled in as a PDF.</td></tr>
   <tr><td><b>Try as a customer</b></td><td>The made-up policyholders, with policy number, mobile and OTP to type in the chat.</td></tr>
-  <tr><td><b>HDFC ERGO Claims Desk</b></td><td>What HDFC ERGO's team would see: registered claims, their status, and call-back requests.</td></tr>
+  <tr><td><b>HDFC ERGO Desk</b></td><td>What HDFC ERGO's team would see: registered claims, their status, and call-back requests.</td></tr>
 </table>
 
 <h3>Demo customers</h3>
@@ -124,7 +124,15 @@
   <tr><th>#</th><th>Do this</th><th>A good result</th><th>✓</th></tr>
   <tr><td class="n">24</td><td>Reset, type <span class="type">I want to apply for this policy</span>, then <span class="type">2</span></td><td>A link to HDFC ERGO's blank proposal form PDF.</td><td class="ok"></td></tr>
 </table>
-<div class="box info">Filling the form gives Priya a filled PDF only. Nothing is saved and no policy number is created: in real life HDFC ERGO issues one after accepting the proposal and receiving the premium.</div>
+<h3>Path C: Priya becomes a policyholder <span class="tag green">After path A</span></h3>
+<table>
+  <tr><th>#</th><th>Do this</th><th>A good result</th><th>✓</th></tr>
+  <tr><td class="n">24a</td><td>On the review page, click <b>Submit to HDFC ERGO (demo)</b>. Use a 10-digit mobile, e.g. 9847000004.</td><td>"Proposal PRP-2026-0101 received. Waiting for HDFC ERGO."</td><td class="ok"></td></tr>
+  <tr><td class="n">24b</td><td>Open <b>HDFC ERGO Desk</b>. Under <b>Proposals</b>, click <b>Approve and issue policy</b>.</td><td>The proposal shows <b>Policy issued · VS-2026-10004</b>. Back on Apply, the box says "Policy issued" by itself.</td><td class="ok"></td></tr>
+  <tr><td class="n">24c</td><td>Click <b>Ask the assistant about my policy</b>, then type <span class="type">123456</span>.</td><td>Verified as Priya; lists her own sections and sums insured. Her card is also on <b>Try as a customer</b>.</td><td class="ok"></td></tr>
+  <tr><td class="n">24d</td><td>Same chat: <span class="type">Heavy rain flooded my shop today, the stock is spoiled</span></td><td>If she ticked storm and flood: <b>likely covered</b>. A loss from <i>before</i> today is likely not covered: the policy starts today.</td><td class="ok"></td></tr>
+</table>
+<div class="box info">In real life HDFC ERGO issues a policy only after accepting the proposal and receiving the premium (with PAN, KYC and bank details). In the demo, <b>Approve</b> on the HDFC ERGO Desk plays that step. <b>Reset</b> removes all proposals and new policies.</div>
 
 <h2>7. Something happened: claims</h2>
 <p>The customer describes what happened in their own words. The assistant checks safety, verifies the policy with an OTP, and our rules say <b>likely covered</b> or <b>likely not covered</b>. The assistant explains, and <b>HDFC ERGO's surveyor makes the final decision</b>.</p>
@@ -137,7 +145,7 @@
   <tr><td class="n">26</td><td><span class="type">Yes, everyone is safe. My policy is VS-2026-10001, mobile 9829000001</span></td><td>"OTP sent to the mobile ending 0001."</td><td class="ok"></td></tr>
   <tr><td class="n">27</td><td><span class="type">123456</span></td><td><b>Likely covered</b> (jewellery is specifically insured), what to do now, documents (police FIR, claim form within 30 days, photos, bills), then "Shall I register this claim with HDFC ERGO?"</td><td class="ok"></td></tr>
   <tr><td class="n">28</td><td><span class="type">Yes, please register it</span></td><td>A claim reference such as <b>CLM-2026-0412</b>.</td><td class="ok"></td></tr>
-  <tr><td class="n">29</td><td>Open <b>HDFC ERGO Claims Desk</b>. On Ramesh's card, change <b>Status</b> to <b>Surveyor assigned</b> (it saves by itself).</td><td>The claim card shows Ramesh, the event and <span class="tag green">Likely covered</span>.</td><td class="ok"></td></tr>
+  <tr><td class="n">29</td><td>Open <b>HDFC ERGO Desk</b>. On Ramesh's card, change <b>Status</b> to <b>Surveyor assigned</b> (it saves by itself).</td><td>The claim card shows Ramesh, the event and <span class="tag green">Likely covered</span>.</td><td class="ok"></td></tr>
   <tr><td class="n">30</td><td>Back in the same chat: <span class="type">What's my claim status?</span></td><td><b>Surveyor assigned</b>, and the surveyor will call to fix a visit.</td><td class="ok"></td></tr>
 </table>
 <div class="box"><span class="say">"The customer never needed an insurance word. The rules decide, the assistant explains, and HDFC ERGO's team sees the claim instantly."</span></div>
@@ -148,7 +156,7 @@
   <tr><td class="n">31</td><td><span class="type">Baarish ka paani dukaan mein aa gaya, saara stock kharab ho gaya</span></td><td>In Hinglish: is everyone safe, do you have a policy.</td><td class="ok"></td></tr>
   <tr><td class="n">32</td><td><span class="type">Haan sab safe hain, policy VS-2026-10002, mobile 9835000002</span></td><td>OTP sent to the mobile ending 0002.</td><td class="ok"></td></tr>
   <tr><td class="n">33</td><td><span class="type">123456</span></td><td><b>Likely not covered</b>: under Named Perils, storm and flood need the add-on she didn't take (page 4). Steps and documents, then asks to register.</td><td class="ok"></td></tr>
-  <tr><td class="n">34</td><td><span class="type">Haan, register kar do</span></td><td>A claim reference. On the Claims Desk the card shows <span class="tag red">Likely not covered</span> with the reason.</td><td class="ok"></td></tr>
+  <tr><td class="n">34</td><td><span class="type">Haan, register kar do</span></td><td>A claim reference. On the HDFC ERGO Desk the card shows <span class="tag red">Likely not covered</span> with the reason.</td><td class="ok"></td></tr>
 </table>
 <div class="box"><span class="say">"It is honest about cover, but never stops a customer from reporting a loss."</span></div>
 
@@ -158,7 +166,7 @@
   <tr><td class="n">35</td><td><span class="type">There was a fire in my godown, what do I do?</span></td><td>Safety first: fire brigade 101. Asks if you have a policy.</td><td class="ok"></td></tr>
   <tr><td class="n">36</td><td><span class="type">Yes, safe. Policy VS-2025-10003, mobile 9822000003</span></td><td>OTP sent to the mobile ending 0003.</td><td class="ok"></td></tr>
   <tr><td class="n">37</td><td><span class="type">123456</span></td><td><b>Likely not covered</b>: the policy ended on 30 Sep 2026, before the fire.</td><td class="ok"></td></tr>
-  <tr><td class="n">38</td><td><span class="type">I want to talk to someone</span></td><td>Call-back reference <b>CB-101</b>; it appears under <b>Call-back requests</b> on the Claims Desk.</td><td class="ok"></td></tr>
+  <tr><td class="n">38</td><td><span class="type">I want to talk to someone</span></td><td>Call-back reference <b>CB-101</b>; it appears under <b>Call-back requests</b> on the HDFC ERGO Desk.</td><td class="ok"></td></tr>
 </table>
 
 <h3>Privacy check</h3>
@@ -172,7 +180,7 @@
   <tr><th>What you see</th><th>What to do</th></tr>
   <tr><td>The chat gets confused or repeats an earlier answer</td><td>Click <b>Reset demo</b> and start that example again.</td></tr>
   <tr><td>It never asks for the OTP when a policyholder reports a loss</td><td>Perfox: the claims integration must be attached to the agent, the latest prompt pasted, and <b>Activate</b> clicked.</td></tr>
-  <tr><td>A claim reference is given but the card is not on the Claims Desk</td><td>Wait 4 seconds or click the tab again. If still missing, note it: the claim was not registered.</td></tr>
+  <tr><td>A claim reference is given but the card is not on the HDFC ERGO Desk</td><td>Wait 4 seconds or click the tab again. If still missing, note it: the claim was not registered.</td></tr>
   <tr><td>Asks for the OTP twice</td><td>Type <span class="type">123456</span> again.</td></tr>
   <tr><td>A page number is one off</td><td>Use <b>Previous / Next page</b> in the document viewer.</td></tr>
 </table>

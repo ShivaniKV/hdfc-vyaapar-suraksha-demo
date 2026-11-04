@@ -256,8 +256,9 @@ $('#proposal').addEventListener('submit', e => {
   lastForm = f; lastGroups = groups;
   $('#review').innerHTML = `<h2>Check your proposal</h2>${groups.map(([h, lines]) => `<h3>${h}</h3><ul>${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`).join('')}
     <p class="hint">PAN, KYC, ID proof and bank details are submitted directly to HDFC ERGO with the proposal form.</p>
-    <div class="actions"><button type="button" id="send-proposal" class="primary">Send to the assistant</button><button type="button" id="download-pdf">Download filled proposal form</button><button type="button" id="edit-proposal">Edit</button></div>
-    <p class="hint">The download is HDFC ERGO's own proposal form with your answers written in, plus an annexure page. Check it, complete PAN, KYC and bank details, and sign.</p>`;
+    <div class="actions"><button type="button" id="submit-proposal" class="primary">Submit to HDFC ERGO (demo)</button><button type="button" id="send-proposal">Send to the assistant</button><button type="button" id="download-pdf">Download filled proposal form</button><button type="button" id="edit-proposal">Edit</button></div>
+    <p class="hint">The download is HDFC ERGO's own proposal form with your answers written in, plus an annexure page. Check it, complete PAN, KYC and bank details, and sign.</p>
+    <div id="proposal-status" class="card" hidden></div>`;
   $('#review').hidden = false; $('#proposal').hidden = true;
   $('#review').scrollIntoView({ behavior: 'smooth' });
 });
@@ -265,6 +266,8 @@ $('#proposal').addEventListener('submit', e => {
 $('#review').addEventListener('click', e => {
   if (e.target.id === 'edit-proposal') { $('#review').hidden = true; $('#proposal').hidden = false; }
   if (e.target.id === 'send-proposal') sendToChat(summaryText);
+  if (e.target.id === 'submit-proposal') submitProposal(e.target);
+  if (e.target.dataset.ask) sendToChat(e.target.dataset.ask);
   if (e.target.id === 'download-pdf') {
     e.target.disabled = true; e.target.textContent = 'Preparing the PDF…';
     fillProposalPdf(lastForm, DATA.sections.filter(s => chosen.has(s.id)), lastGroups)
@@ -272,6 +275,45 @@ $('#review').addEventListener('click', e => {
       .finally(() => { e.target.disabled = false; e.target.textContent = 'Download filled proposal form'; });
   }
 });
+
+// ---------- Demo submission: the proposal goes to the HDFC ERGO Desk, where approving it issues a policy ----------
+let proposalTimer;
+async function submitProposal(btn) {
+  const f = lastForm, g = k => f.get(k) || '';
+  // Sum insured for each chosen section: its first rupee amount on the form (not the "If yes…" follow-ups).
+  const sections = { I: ['v_building', 'v_machinery', 'v_furniture', 'v_raw', 'v_process', 'v_finished', 'v_other'].reduce((t, k) => t + Number(g(k) || 0), 0) };
+  DATA.sections.filter(s => chosen.has(s.id)).forEach(s => {
+    const i = s.questions.findIndex(([l, t], i) => t === 'number' && l.includes('₹') && !/^If /.test(l) && Number(f.get(`s_${s.id}_${i}`)));
+    sections[s.id.toUpperCase()] = i < 0 ? 0 : Number(f.get(`s_${s.id}_${i}`));
+  });
+  btn.disabled = true;
+  const r = await fetch('/api/proposals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+    name: g('name'), mobile: g('mobile'), business: g('industry'), city: g('address').split(',').pop().trim(), kind: g('kind'),
+    addons: f.getAll('perils_extra').map(a => /storm/i.test(a) ? 'storm_flood' : 'earthquake'), sections, start: g('start'), tenure: g('tenure'),
+  }) }).catch(() => null);
+  if (!r?.ok) { btn.disabled = false; $('#form-msg').textContent = 'The proposal could not be submitted. Check the mobile number and try again.'; return; }
+  btn.textContent = 'Submitted';
+  showProposal(await r.json());
+}
+
+function showProposal(p) {
+  const box = $('#proposal-status');
+  box.hidden = false;
+  clearTimeout(proposalTimer);
+  if (p.status === 'Policy issued') {
+    const ask = `I have a Vyaapar Suraksha policy. Policy number ${p.policy}, mobile ${p.mobile}. What does it cover?`;
+    box.innerHTML = `<h3>Policy issued: ${esc(p.policy)}</h3>
+      <p>HDFC ERGO accepted proposal ${esc(p.reference)}. You are now a policyholder: registered mobile ${esc(p.mobile)}, demo OTP 123456.</p>
+      <button type="button" class="primary" data-ask="${esc(ask)}">Ask the assistant about my policy</button>`;
+    return;
+  }
+  box.innerHTML = p.status === 'Not accepted'
+    ? `<h3>Proposal ${esc(p.reference)}: not accepted</h3><p>HDFC ERGO did not accept this proposal. Please contact HDFC ERGO on 022 6158 2020.</p>`
+    : `<h3>Proposal ${esc(p.reference)} received</h3><p class="muted">Waiting for HDFC ERGO. In the demo, approve it on the HDFC ERGO Desk tab; this updates by itself.</p>`;
+  if (p.status === 'Proposal received') {
+    proposalTimer = setTimeout(() => fetch(`/api/proposals/${p.reference}`).then(r => r.json()).then(showProposal).catch(() => {}), 4000);
+  }
+}
 
 // The widget has no "send message" API, so type into its message box and press its Send button.
 // The chat may be closed (the Apply tab closes it), so wait up to 5 seconds for its message box to appear.
@@ -416,7 +458,7 @@ Perfox('on', 'message:sent', ({ text }) => {
   if (r) { r.checked = true; renderAddons(); }
 });
 
-// ---------- Try as a customer, and HDFC ERGO Claims Desk (data from src/worker.js) ----------
+// ---------- Try as a customer, and HDFC ERGO Desk (data from src/worker.js) ----------
 const RESULT = { likely_covered: 'Likely covered', likely_not_covered: 'Likely not covered', needs_review: 'Needs review' };
 const when = iso => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 let deskTimer;
@@ -432,7 +474,7 @@ async function renderCustomers() {
   $('#customer-cards').innerHTML = customers.map((c, i) => `
     <div class="card customer">
       <h3>${esc(c.name)}</h3>
-      <p class="muted">${esc(c.business)}, ${esc(c.city)} · ${esc(c.kind)} · <span class="${c.active ? 'ok' : 'bad'}">${c.active ? 'Active' : 'Expired ' + esc(c.end)}</span></p>
+      <p class="muted">${c.issued ? 'New policy · ' : ''}${esc(c.business)}${c.city ? ', ' + esc(c.city) : ''} · ${esc(c.kind)} · <span class="${c.active ? 'ok' : 'bad'}">${c.active ? 'Active' : 'Expired ' + esc(c.end)}</span></p>
       <dl>
         <dt>Policy number</dt><dd>${esc(c.policy)}</dd>
         <dt>Mobile</dt><dd>${esc(c.mobile)}</dd>
@@ -445,6 +487,7 @@ async function renderCustomers() {
       <h3>Priya Nair</h3>
       <p class="muted">New bakery, Kochi · no policy yet</p>
       <p class="story">“I'm opening a bakery. What insurance do I need?”</p>
+      <p class="muted">To make her a policyholder: fill the Apply form, press Submit to HDFC ERGO (demo), then approve it on the HDFC ERGO Desk.</p>
       <button type="button" class="primary" data-story="new">Send this to the assistant</button>
     </div>
     <p id="customer-msg" class="form-msg"></p>`;
@@ -456,7 +499,18 @@ async function renderCustomers() {
 }
 
 async function renderDesk() {
-  const { claims, callbacks, statuses } = await loadClaims();
+  const { claims, callbacks, statuses, proposals } = await loadClaims();
+  $('#desk-proposals').innerHTML = proposals.length ? proposals.map(p => `
+    <div class="card claim">
+      <div class="claim-head">
+        <strong>${esc(p.reference)}</strong>
+        <span class="pill ${p.status === 'Policy issued' ? 'likely_covered' : p.status === 'Not accepted' ? 'likely_not_covered' : 'needs_review'}">${esc(p.status)}${p.policy ? ' · ' + esc(p.policy) : ''}</span>
+        <span class="muted">${when(p.at)}</span>
+      </div>
+      <p><strong>${esc(p.name)}</strong> · ${esc(p.business)}${p.city ? ', ' + esc(p.city) : ''} · mobile ${esc(p.mobile)}</p>
+      <p>${esc(p.kind)}${p.addons.length ? ' + ' + esc(p.addons.join(', ').replace(/_/g, ' and ')) : ''} · ${p.years} year${p.years > 1 ? 's' : ''} · ${Object.entries(p.sections).map(([k, v]) => `Section ${k}${v ? ' ₹' + Number(v).toLocaleString('en-IN') : ''}`).join(', ')}</p>
+      ${p.status === 'Proposal received' ? `<div class="actions"><button type="button" class="primary" data-decide="${esc(p.reference)}/approve">Approve and issue policy</button><button type="button" data-decide="${esc(p.reference)}/decline">Decline</button></div>` : ''}
+    </div>`).join('') : '<p class="muted">No proposals yet. Fill the Apply form as Priya and press Submit to HDFC ERGO (demo).</p>';
   $('#desk-claims').innerHTML = claims.length ? claims.map(c => `
     <div class="card claim">
       <div class="claim-head">
@@ -477,6 +531,14 @@ async function renderDesk() {
     <li><strong>${esc(b.reference)}</strong> · ${esc(b.customer)} (${esc(b.policy)}) · mobile ${esc(b.mobile)} · ${when(b.at)}<br>${esc(b.reason)}</li>`).join('')}</ul>`
     : '<p class="muted">No call-back requests.</p>';
 }
+
+$('#desk-proposals').addEventListener('click', async e => {
+  const b = e.target.closest('[data-decide]');
+  if (!b) return;
+  b.disabled = true;
+  await fetch(`/api/proposals/${b.dataset.decide}`, { method: 'POST' });
+  renderDesk();
+});
 
 $('#desk-claims').addEventListener('change', async e => {
   const sel = e.target.closest('select[data-ref]');

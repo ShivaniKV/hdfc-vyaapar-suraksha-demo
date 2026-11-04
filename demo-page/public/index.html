@@ -19,7 +19,7 @@
     <button type="button" class="tab" data-view="guide" aria-selected="true">Policy Guide</button>
     <button type="button" class="tab" data-view="apply" aria-selected="false">Apply</button>
     <button type="button" class="tab" data-view="customers" aria-selected="false">Try as a customer</button>
-    <button type="button" class="tab" data-view="desk" aria-selected="false">HDFC ERGO Claims Desk</button>
+    <button type="button" class="tab" data-view="desk" aria-selected="false">HDFC ERGO Desk</button>
   </nav>
 
   <main>
@@ -54,13 +54,15 @@
     </section>
 
     <section id="customers" class="view" hidden>
-      <p class="lead">Made-up policyholders for the demo. Tell the assistant you already have a policy, then give the policy number, mobile and OTP below when it asks. <strong>Reset demo</strong> always brings these records back and clears all claims.</p>
+      <p class="lead">Made-up policyholders for the demo. Tell the assistant you already have a policy, then give the policy number, mobile and OTP below when it asks. Policies issued from the Apply form appear here too. <strong>Reset demo</strong> always brings back just these three and clears all proposals, new policies and claims.</p>
       <div id="customer-cards" class="customer-grid"></div>
     </section>
 
     <section id="desk" class="view" hidden>
-      <p class="lead">What HDFC ERGO's claims team sees. Claims registered in the chat appear here; change a claim's status and the assistant will report the new status when the customer asks.</p>
-      <h2>Claims</h2>
+      <p class="lead">What HDFC ERGO's team sees. Approve a proposal to issue a policy; the new policyholder can then verify in the chat. Claims registered in the chat appear here; change a claim's status and the assistant will report it when the customer asks.</p>
+      <h2>Proposals</h2>
+      <div id="desk-proposals"></div>
+      <h2 class="list-title">Claims</h2>
       <div id="desk-claims"></div>
       <h2 class="list-title">Call-back requests</h2>
       <div id="desk-callbacks"></div>
