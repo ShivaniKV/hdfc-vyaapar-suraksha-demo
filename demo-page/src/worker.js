@@ -398,7 +398,7 @@ export class ClaimsStore extends DurableObject {
     if (method === 'tools/call') {
       const conv = request.headers.get('X-Sa-Conversation-Id') || 'no-conversation';
       const out = await this.call(params?.name, params?.arguments || {}, conv);
-      console.log('tool', params?.name, JSON.stringify(params?.arguments || {}), '->', JSON.stringify(out).slice(0, 160));
+      console.log('tool', conv.slice(-8), params?.name, JSON.stringify(params?.arguments || {}), '->', JSON.stringify(out).slice(0, 160));
       return reply({ content: [{ type: 'text', text: JSON.stringify(out) }] });
     }
     return json({ jsonrpc: '2.0', id, error: { code: -32601, message: 'Method not found' } });
@@ -441,7 +441,7 @@ export class ClaimsStore extends DurableObject {
     if (name === 'get_my_policy') {
       return {
         ok: true, policy_number: me.policy, name: me.name, business: `${me.business}, ${me.city}`,
-        period: `${me.start} to ${me.end}`, status: today() <= me.end ? 'Active' : `Expired on ${me.end}`,
+        period: `${me.start} to ${me.end}`, status: { upcoming: `Not started yet; cover starts on ${me.start}`, active: 'Active', expiring: `Active, ends soon on ${me.end}`, expired: `Expired on ${me.end}` }[statusOf(me)],
         section_I_kind: me.kind, add_ons: me.addons.length ? me.addons : 'None (no storm and flood, no earthquake add-on)',
         sections: Object.entries(me.sections).map(([k, v]) => `Section ${k} ${SECTION_NAMES[k] || ''}: sum insured ${v ? rupees(v) : 'not stated'}${k === 'II' ? (me.jewelleryInsured ? ' (jewellery specifically insured)' : ' (jewellery not specifically insured)') : ''}`),
       };
