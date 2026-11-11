@@ -493,14 +493,20 @@ export class ClaimsStore extends DurableObject {
     }
     if (name === 'check_claim') {
       const r = checkClaim(me, a);
+      // Kept so register_claim can fill in details the model leaves out (it often drops the loss value).
+      session.lastCheck = a;
+      await this.save(s);
       const label = r.result === 'likely_covered' ? 'likely covered' : r.result === 'likely_not_covered' ? 'likely not covered' : 'needs review by HDFC ERGO';
+      const source = r.reasons.length ? r.reasons[0].source : r.section ? `Policy Wordings, Section ${r.section}` : 'Policy Wordings';
       // Kept short: every extra word is re-sent to the model on each later step of the turn.
       return {
         ok: true, result: r.result, incident_date: r.incident_date, notes: r.notes, what_to_do_now: DO_NOW, documents: documentsFor(r.event),
-        say: `This check is complete; answer the customer now, in their language. Say the loss is ${label}${r.reasons.length ? ' because: ' + r.reasons.map(x => `${x.reason} (${x.source})`).join(' ') : '.'} Then: "HDFC ERGO's surveyor makes the final decision." Then the what to do now steps and documents, briefly (short bullets in chat; on a voice call, say the two or three most important), then ask if they want to register the claim.`,
+        say: `This check is complete; answer the customer now, in their language. Say the loss is ${label}${r.reasons.length ? ' because: ' + r.reasons.map(x => `${x.reason} (${x.source})`).join(' ') : '.'} Then: "HDFC ERGO's surveyor makes the final decision." Then the what to do now steps and documents, briefly (short bullets in chat; on a voice call, say the two or three most important), then ask if they want to register the claim. In chat, end with "Source: ${source}" and "The policy wording is final."`,
       };
     }
     if (name === 'register_claim') {
+      const given = Object.fromEntries(Object.entries(a).filter(([, v]) => v !== undefined && v !== null && v !== ''));
+      a = { ...(session.lastCheck || {}), ...given };
       const r = checkClaim(me, a);
       const reference = `CLM-2026-${String(s.next++).padStart(4, '0')}`;
       const now = new Date().toISOString();
