@@ -527,7 +527,8 @@ async function loadPeople() {
 
 const copyBtn = (value, label) => `<button type="button" class="copy" data-copy="${esc(value)}" title="Copy ${label}" aria-label="Copy ${label}">${COPY_ICON}</button>`;
 const idRow = (label, value) => `<div class="id-row"><dt>${label}</dt><dd>${esc(value)}</dd>${copyBtn(value, label.toLowerCase())}</div>`;
-const allIds = p => `Policy number ${p.policy}, mobile ${p.mobile}, OTP ${p.otp}`;
+// The OTP is left out: it goes in only after the assistant asks for it.
+const allIds = p => `${p.name}, policy number ${p.policy}, mobile ${p.mobile}`;
 
 // The person's filled proposal form, folded away behind a button on their card.
 function formDetails(p) {
