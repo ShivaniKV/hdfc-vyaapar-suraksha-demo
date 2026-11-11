@@ -460,6 +460,7 @@ export class ClaimsStore extends DurableObject {
       if (c && session.pending === c.policy && otp) return this.call('verify_otp', { otp }, conv);
       const mobile = otp && digits.length === 16 ? digits.slice(0, 10) : digits.slice(-10);
       if (!c || c.mobile !== mobile) return { ok: false, say: 'No policy matches that policy number and mobile number. Ask the customer to check both, or contact HDFC ERGO on 022 6158 2020 / 022 6234 6234.' };
+      if (!String(a.name || '').trim()) return { ok: false, say: 'Ask for the policyholder\'s name, then call start_verification again with the name, policy number and mobile.' };
       if (!nameMatches(a.name, c.name)) return { ok: false, say: 'The name does not match the name on this policy. Ask the customer to give the policyholder\'s name as on the policy. Do not reveal the name on the policy.' };
       session.pending = c.policy; session.tries = 0;
       await this.save(s);
