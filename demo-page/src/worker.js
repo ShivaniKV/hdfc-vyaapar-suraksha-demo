@@ -1,7 +1,8 @@
 // Claims back end for the Vyaapar Suraksha demo.
 // /mcp  : the tools the Perfox agent calls (MCP over HTTP, JSON-RPC 2.0).
-// /api/*: the demo page's Claims Desk and Reset.
-// All data is made up. One Durable Object holds the claims, call-backs and OTP checks; Reset empties it.
+// /api/*: the demo page's People page, HDFC ERGO Desk and Reset.
+// All data is made up. One Durable Object holds the claims, call-backs, OTP checks and proposals (Reset empties these)
+// and the added people (kept until removed on the People page).
 
 import { DurableObject } from 'cloudflare:workers';
 
@@ -213,8 +214,14 @@ const TOOLS = [
 ];
 
 const clean = s => String(s || '').replace(/[^0-9a-z]/gi, '').toUpperCase();
-// The three made-up customers plus any policy issued from a proposal on the HDFC ERGO Desk (cleared by Reset).
-const allCustomers = s => [...CUSTOMERS, ...(s.policies || [])];
+// The three made-up customers plus the people added on the People page or issued from a proposal (kept across Reset).
+const allCustomers = s => [...CUSTOMERS, ...(s.people?.list || [])];
+// Where a policy stands today: not started yet, active, ending within 30 days, or expired.
+function statusOf(c) {
+  const t = today();
+  return c.start > t ? 'upcoming' : c.end < t ? 'expired' : daysBetween(t, c.end) <= 30 ? 'expiring' : 'active';
+}
+const endFor = (start, years) => addDays(Number(start.slice(0, 4)) + years + start.slice(4), -1);
 // On voice calls numbers can arrive as words ("nine eight two nine…", "double zero", "ek do teen") or Devanagari digits.
 const WORD_DIGITS = {
   zero: 0, oh: 0, o: 0, one: 1, two: 2, to: 2, too: 2, three: 3, four: 4, for: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
@@ -258,13 +265,38 @@ function readProposal(p) {
   };
 }
 
+// A person added on the People page: a proposal's fields plus a required start date (a past one makes an expired policy).
+function readPerson(p) {
+  const r = readProposal(p);
+  if (!r || !r.start) return null;
+  return { ...r, jewelleryInsured: !!p.jewelleryInsured, story: String(p.story || '').trim().slice(0, 200) || 'I want to check what my policy covers' };
+}
+
+// Storage: 'state' holds claims, call-backs, sessions and proposals (Reset clears it);
+// 'people' holds added policyholders and the next policy number (Reset keeps it).
 export class ClaimsStore extends DurableObject {
   async state() {
     const s = (await this.ctx.storage.get('state')) || { claims: [], callbacks: [], sessions: {}, next: 412 };
-    s.proposals ||= []; s.policies ||= [];
+    s.proposals ||= [];
+    s.people = (await this.ctx.storage.get('people')) || { list: [], next: 10004 };
     return s;
   }
-  save(s) { return this.ctx.storage.put('state', s); }
+  save(s) {
+    const { people, ...rest } = s;
+    return this.ctx.storage.put({ state: rest, people });
+  }
+  // Issue a policy number and keep the person in the people store.
+  addPerson(s, p, source) {
+    const policy = `VS-${p.start.slice(0, 4)}-${s.people.next++}`;
+    const person = {
+      name: p.name, business: p.business, city: p.city, policy, mobile: p.mobile,
+      start: p.start, end: endFor(p.start, p.years), kind: p.kind, addons: p.addons, sections: p.sections,
+      jewelleryInsured: !!p.jewelleryInsured, story: p.story || 'I want to check what my new policy covers',
+      source, proposal: p.reference, added_at: new Date().toISOString(),
+    };
+    s.people.list.push(person);
+    return person;
+  }
 
   async fetch(request) {
     const url = new URL(request.url);
@@ -272,12 +304,40 @@ export class ClaimsStore extends DurableObject {
     if (url.pathname === '/api/state' && request.method === 'GET') {
       const s = await this.state();
       return json({
-        customers: allCustomers(s).map(c => ({ name: c.name, business: c.business, city: c.city, policy: c.policy, mobile: c.mobile, otp: DEMO_OTP, kind: c.kind, end: c.end, story: c.story, issued: !!c.proposal, active: today() <= c.end })),
-        claims: s.claims, callbacks: s.callbacks, statuses: STATUSES, proposals: s.proposals,
+        customers: allCustomers(s).map(c => ({
+          name: c.name, business: c.business, city: c.city, policy: c.policy, mobile: c.mobile, otp: DEMO_OTP,
+          kind: c.kind, addons: c.addons, sections: c.sections, start: c.start, end: c.end, story: c.story,
+          source: c.source || 'demo', status: statusOf(c),
+        })),
+        claims: s.claims, callbacks: s.callbacks, statuses: STATUSES, proposals: s.proposals, today: today(),
       });
     }
+    // Reset clears claims, call-backs, sessions and proposals; added people stay until removed on the People page.
     if (url.pathname === '/api/reset' && request.method === 'POST') {
-      await this.ctx.storage.deleteAll();
+      await this.ctx.storage.delete('state');
+      return json({ ok: true });
+    }
+    if (url.pathname === '/api/people' && request.method === 'POST') {
+      const p = readPerson(await request.json().catch(() => ({})));
+      if (!p) return json({ error: 'A name, a 10-digit mobile and a start date are needed' }, 400);
+      const s = await this.state();
+      const person = this.addPerson(s, p, 'added');
+      await this.save(s);
+      return json(person);
+    }
+    if (url.pathname === '/api/people/remove-added' && request.method === 'POST') {
+      const s = await this.state();
+      s.people.list = [];
+      await this.save(s);
+      return json({ ok: true });
+    }
+    const pp = url.pathname.match(/^\/api\/people\/([\w-]+)$/);
+    if (pp && request.method === 'DELETE') {
+      const s = await this.state();
+      const before = s.people.list.length;
+      s.people.list = s.people.list.filter(c => c.policy !== pp[1]);
+      if (s.people.list.length === before) return json({ error: 'Only added people can be removed' }, 404);
+      await this.save(s);
       return json({ ok: true });
     }
     if (url.pathname === '/api/proposals' && request.method === 'POST') {
@@ -300,13 +360,8 @@ export class ClaimsStore extends DurableObject {
       else {
         // Approving plays HDFC ERGO accepting the proposal and receiving the premium: a policy is issued from it.
         const start = p.start && p.start > today() ? p.start : today();
-        const policy = `VS-2026-${10004 + s.policies.length}`;
-        s.policies.push({
-          name: p.name, business: p.business, city: p.city, policy, mobile: p.mobile,
-          start, end: addDays(Number(start.slice(0, 4)) + p.years + start.slice(4), -1), kind: p.kind, addons: p.addons,
-          sections: p.sections, jewelleryInsured: false, story: 'I want to check what my new policy covers', proposal: p.reference,
-        });
-        p.status = 'Policy issued'; p.policy = policy;
+        p.policy = this.addPerson(s, { ...p, start }, 'proposal').policy;
+        p.status = 'Policy issued';
       }
       p.decided_at = new Date().toISOString();
       await this.save(s);

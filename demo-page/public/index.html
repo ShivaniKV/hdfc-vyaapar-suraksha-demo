@@ -4,37 +4,85 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vyaapar Suraksha Assistant – Pilot Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="top">
-    <div>
-      <h1>Business Secure Vyaapar Suraksha</h1>
-      <p class="sub">Customer service assistant · Pilot demo for HDFC ERGO, prepared by Skillmine on Perfox.ai</p>
-    </div>
-    <button id="reset" class="reset" type="button">Reset demo</button>
+    <a class="brand" href="#home" data-go="home">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+      </span>
+      <span>
+        <strong>Vyaapar Suraksha</strong>
+        <small>HDFC ERGO · Business Secure · Pilot demo</small>
+      </span>
+    </a>
+    <nav class="tabs" aria-label="Views">
+      <button type="button" class="tab" data-view="home" aria-selected="true">Home</button>
+      <button type="button" class="tab" data-view="guide" aria-selected="false">Policy Guide</button>
+      <button type="button" class="tab" data-view="apply" aria-selected="false">Apply</button>
+      <button type="button" class="tab" data-view="people" aria-selected="false">People</button>
+      <button type="button" class="tab" data-view="desk" aria-selected="false">HDFC ERGO Desk</button>
+    </nav>
+    <button id="reset" class="btn ghost-light" type="button" title="Clears claims, call-backs, proposals and the chat. Added people stay.">Reset demo</button>
   </header>
 
-  <nav class="tabs" aria-label="Views">
-    <button type="button" class="tab" data-view="guide" aria-selected="true">Policy Guide</button>
-    <button type="button" class="tab" data-view="apply" aria-selected="false">Apply</button>
-    <button type="button" class="tab" data-view="customers" aria-selected="false">Try as a customer</button>
-    <button type="button" class="tab" data-view="desk" aria-selected="false">HDFC ERGO Desk</button>
-  </nav>
-
   <main>
-    <section id="guide" class="view">
-      <p class="lead">One package policy for your business with <strong>21 sections</strong>. Section I is compulsory; the other 20 are optional. Ask the assistant anything, or open <strong>Apply</strong> when you're ready. Every <em>Read in the policy</em> link opens HDFC ERGO's own document at the exact place, highlighted.</p>
+    <!-- Home -->
+    <section id="home" class="view">
+      <div class="hero">
+        <p class="eyebrow">Customer service assistant · Chat and voice · English, Hinglish, Hindi</p>
+        <h1>Business insurance, explained in plain words.</h1>
+        <p class="hero-sub">One package policy for shops, offices and small factories, with 21 sections. Ask the assistant anything, fill the proposal form with help at every step, or try a claim as a policyholder.</p>
+        <div class="entry-grid">
+          <button type="button" class="entry" data-go="guide">
+            <span class="entry-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span><strong>Explore the policy</strong>
+            <span>The 21 sections in plain words, each linked to the exact page in HDFC ERGO's documents.</span>
+          </button>
+          <button type="button" class="entry" data-go="apply">
+            <span class="entry-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg></span><strong>Apply for a policy</strong>
+            <span>HDFC ERGO's proposal form, asking only about the sections you choose.</span>
+          </button>
+          <button type="button" class="entry" data-go="people">
+            <span class="entry-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.4 1.7-2 3-2s2.4.6 3 2M15 10h3M15 13h3"/></svg></span><strong>Try as a policyholder</strong>
+            <span>Pick a demo person, copy their policy number, then check cover or register a claim.</span>
+          </button>
+          <button type="button" class="entry" data-go="desk">
+            <span class="entry-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h2a2 2 0 0 1 2 2v10M3 21h18M8 7h4M8 11h4M8 15h4"/></svg></span><strong>HDFC ERGO Desk</strong>
+            <span>What HDFC ERGO's team sees: proposals to approve, claims and call-backs.</span>
+          </button>
+        </div>
+      </div>
 
-      <div class="card kinds">
+      <div class="panel quick">
+        <div class="panel-head">
+          <h2>Demo logins</h2>
+          <button type="button" class="link" data-go="people">See everyone →</button>
+        </div>
+        <div id="quick-people" class="quick-list"><p class="muted">Loading…</p></div>
+        <p class="hint">OTP for everyone: <code>123456</code>. Tell the assistant you have a policy, then give the policy number and mobile when it asks.</p>
+      </div>
+      <p class="classic-link"><button type="button" class="link" id="classic-on">Prefer the classic view? Open it</button></p>
+    </section>
+
+    <!-- Policy Guide -->
+    <section id="guide" class="view" hidden>
+      <div class="page-head">
+        <h1>Policy Guide</h1>
+        <p>Section I is compulsory; the other 20 are optional. Every <em>Read in the policy</em> link opens HDFC ERGO's own document at the exact place, highlighted.</p>
+      </div>
+
+      <div class="panel kinds">
         <h2>Section I – Property Damage: two kinds</h2>
         <div class="kind-grid">
-          <div>
+          <div class="kind">
             <h3>Named Perils</h3>
             <p>Pays only for the dangers listed in the policy: fire, explosion, lightning, landslide, forest fire, impact damage, riot and strike, water tank bursting, sprinkler leakage. You can add <strong>storm and flood</strong> and <strong>earthquake</strong>.</p>
             <p class="links"><button type="button" class="ref" data-topic="named-perils">Read in the policy</button> <button type="button" class="ref" data-topic="perils-list">See the list</button></p>
           </div>
-          <div>
+          <div class="kind">
             <h3>All Risk</h3>
             <p>Pays for any sudden, accidental physical loss or damage, except what the policy specifically excludes. It covers more situations.</p>
             <p class="links"><button type="button" class="ref" data-topic="all-risk">Read in the policy</button></p>
@@ -47,20 +95,47 @@
       <ol id="sections" class="sections"></ol>
     </section>
 
+    <!-- Apply -->
     <section id="apply" class="view" hidden>
-      <p class="lead">Fill in what applies to your business. Questions appear only for the sections you choose. Use <strong>What's this?</strong> beside any item to read it in the policy. PAN, KYC, ID and bank details are not collected here; you submit them directly to HDFC ERGO.</p>
+      <div class="page-head">
+        <h1>Apply</h1>
+        <p>Fill in what applies to your business. Questions appear only for the sections you choose. Use <strong>What's this?</strong> beside any item to read it in the policy. PAN, KYC, ID and bank details are not collected here; you submit them directly to HDFC ERGO.</p>
+      </div>
       <form id="proposal" novalidate></form>
-      <div id="review" class="card review" hidden></div>
+      <div id="review" class="panel review" hidden></div>
     </section>
 
-    <section id="customers" class="view" hidden>
-      <p class="lead">Made-up policyholders for the demo. Tell the assistant you already have a policy, then give the policy number, mobile and OTP below when it asks. Policies issued from the Apply form appear here too. <strong>Reset demo</strong> always brings back just these three and clears all proposals, new policies and claims.</p>
-      <div id="customer-cards" class="customer-grid"></div>
+    <!-- People -->
+    <section id="people" class="view" hidden>
+      <div class="page-head row">
+        <div>
+          <h1>People</h1>
+          <p>Demo policyholders and anyone you add. Copy a policy number and mobile, then tell the assistant you have a policy. OTP for everyone is <code>123456</code>.</p>
+        </div>
+        <div class="head-actions">
+          <button type="button" class="btn primary" id="add-person">+ Add a person</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <input type="search" id="people-search" placeholder="Search name, business, city, policy or mobile" aria-label="Search people">
+        <div id="people-filters" class="chips" role="group" aria-label="Filter by status"></div>
+      </div>
+      <div id="people-groups"></div>
+      <div class="footer-actions">
+        <button type="button" class="btn" id="export-people">Export as CSV</button>
+        <button type="button" class="btn danger" id="remove-added">Remove all added people</button>
+        <span id="customer-msg" class="form-msg" role="status"></span>
+      </div>
     </section>
 
+    <!-- HDFC ERGO Desk -->
     <section id="desk" class="view" hidden>
-      <p class="lead">What HDFC ERGO's team sees. Approve a proposal to issue a policy; the new policyholder can then verify in the chat. Claims registered in the chat appear here; change a claim's status and the assistant will report it when the customer asks.</p>
-      <h2>Proposals</h2>
+      <div class="page-head">
+        <h1>HDFC ERGO Desk</h1>
+        <p>What HDFC ERGO's team sees. Approve a proposal to issue a policy; the new policyholder appears on the People page. Change a claim's status and the assistant reports it when the customer asks.</p>
+      </div>
+      <div id="desk-stats" class="stats"></div>
+      <h2 class="list-title">Proposals</h2>
       <div id="desk-proposals"></div>
       <h2 class="list-title">Claims</h2>
       <div id="desk-claims"></div>
@@ -68,6 +143,52 @@
       <div id="desk-callbacks"></div>
     </section>
   </main>
+
+  <!-- Add a person -->
+  <dialog id="person-dialog" class="dialog" aria-labelledby="person-title">
+    <form id="person-form" method="dialog" novalidate>
+      <div class="dialog-head">
+        <h2 id="person-title">Add a person</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="hint">A policy number is issued straight away. Pick a past start date to make an expired policy, or a future one for a policy that hasn't started.</p>
+      <div class="grid">
+        <label class="field"><span>Full name <em>*</em></span><input name="name" required></label>
+        <label class="field"><span>Registered mobile <em>*</em></span><input name="mobile" type="tel" inputmode="numeric" required placeholder="10 digits"></label>
+        <label class="field"><span>Business</span><input name="business" placeholder="e.g. Pharmacy"></label>
+        <label class="field"><span>City</span><input name="city"></label>
+        <label class="field"><span>Start date <em>*</em></span><input name="start" type="date" required></label>
+        <label class="field"><span>Tenure</span><select name="tenure"><option value="1">1 year</option><option value="2">2 years</option><option value="3">3 years</option><option value="4">4 years</option><option value="5">5 years</option></select></label>
+      </div>
+      <div class="quick-dates" aria-label="Quick status">
+        <span>Quick:</span>
+        <button type="button" class="chip" data-quick="active">Active</button>
+        <button type="button" class="chip" data-quick="expiring">Expiring soon</button>
+        <button type="button" class="chip" data-quick="expired">Expired</button>
+        <button type="button" class="chip" data-quick="upcoming">Not started</button>
+      </div>
+      <p class="q">Section I – Property Damage</p>
+      <div class="grid">
+        <label class="field"><span>Kind</span><select name="kind"><option>Named Perils</option><option>All Risk</option></select></label>
+        <label class="field"><span>Section I sum insured (₹)</span><input name="si_I" type="number" min="0" inputmode="numeric" placeholder="e.g. 1000000"></label>
+      </div>
+      <div class="choices inline">
+        <label class="choice"><input type="checkbox" name="addon" value="storm_flood"> Storm and flood add-on</label>
+        <label class="choice"><input type="checkbox" name="addon" value="earthquake"> Earthquake add-on</label>
+        <label class="choice"><input type="checkbox" name="jewelleryInsured"> Jewellery specifically insured</label>
+      </div>
+      <p class="q">Optional sections <span class="muted">(sum insured is optional)</span></p>
+      <div id="person-sections" class="section-picks"></div>
+      <label class="field"><span>What they'll say to the assistant</span><input name="story" placeholder="e.g. A pipe burst and my stock got wet"></label>
+      <div class="actions">
+        <button type="submit" class="btn primary">Add and issue policy</button>
+        <button type="button" class="btn" data-close>Cancel</button>
+        <span id="person-msg" class="form-msg" role="status"></span>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <aside id="viewer" class="viewer" hidden aria-labelledby="viewer-title">
     <div class="viewer-head">

@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8787", "--directory", "C:/Users/shivani/Desktop/HDFC Vyaapar Suraksha Demo/demo-page/public"],
       "port": 8787
+    },
+    {
+      "name": "demo-worker",
+      "runtimeExecutable": "npx.cmd",
+      "runtimeArgs": ["--yes", "wrangler@4", "dev", "--config", "C:/Users/shivani/Desktop/HDFC Vyaapar Suraksha Demo/demo-page/wrangler.jsonc", "--port", "8788"],
+      "port": 8788
     }
   ]
 }

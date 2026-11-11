@@ -9,14 +9,36 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const chosen = new Set();          // optional sections ticked, e.g. "ii", "xi"
 let DATA;
 
-fetch('policy-data.json').then(r => r.json()).then(d => { DATA = d; renderGuide(); renderForm(); fromHash(); });
+fetch('policy-data.json').then(r => r.json()).then(d => { DATA = d; renderGuide(); renderForm(); renderPersonSections(); fromHash(); });
 
 // ---------- Views ----------
+// The new Home is the start page; "classic view" starts on the Policy Guide instead (remembered in this browser).
+const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} } };
+let current, deskTimer;
 function show(view) {
+  if (view === current) return;
+  current = view;
   document.querySelectorAll('.view').forEach(v => { v.hidden = v.id !== view; });
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === view)));
+  window.scrollTo({ top: 0 });
+  // Load a view's data when it opens; the desk refreshes every few seconds while open, so new claims appear by themselves.
+  clearInterval(deskTimer);
+  const fail = el => () => { $(el).innerHTML = '<p class="empty">The claims service is not available on this server.</p>'; };
+  if (view === 'home') { store.set('vs_classic', null); renderQuick().catch(fail('#quick-people')); }
+  if (view === 'people') renderPeople().catch(fail('#people-groups'));
+  if (view === 'desk') {
+    renderDesk().catch(fail('#desk-claims'));
+    deskTimer = setInterval(() => { if (!document.activeElement?.matches('select[data-ref]')) renderDesk().catch(() => {}); }, 4000);
+  }
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => show(t.dataset.view)));
+document.addEventListener('click', e => {
+  const go = e.target.closest('[data-go]');
+  if (!go) return;
+  e.preventDefault();
+  show(go.dataset.go);
+});
+$('#classic-on').addEventListener('click', () => { store.set('vs_classic', '1'); show('guide'); });
 
 // ---------- Policy Guide ----------
 function renderGuide() {
@@ -458,10 +480,25 @@ Perfox('on', 'message:sent', ({ text }) => {
   if (r) { r.checked = true; renderAddons(); }
 });
 
-// ---------- Try as a customer, and HDFC ERGO Desk (data from src/worker.js) ----------
+// ---------- People, Home quick list, and HDFC ERGO Desk (data from src/worker.js) ----------
 const RESULT = { likely_covered: 'Likely covered', likely_not_covered: 'Likely not covered', needs_review: 'Needs review' };
 const when = iso => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-let deskTimer;
+const day = iso => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+const STATUS = {
+  active: { label: 'Active', note: 'Policy in force today' },
+  expiring: { label: 'Expiring soon', note: 'Ends within 30 days' },
+  upcoming: { label: 'Not started', note: 'Start date is in the future' },
+  expired: { label: 'Expired', note: 'Claims after the end date are not covered' },
+  pending: { label: 'Proposal pending', note: 'Waiting for approval on the HDFC ERGO Desk' },
+  prospect: { label: 'No policy yet', note: 'Try the buying journey' },
+};
+const ORDER = ['active', 'expiring', 'upcoming', 'expired', 'pending', 'prospect'];
+const ORIGIN = { demo: 'Demo', added: 'Added', proposal: 'From proposal' };
+const PRIYA = { name: 'Priya Nair', business: 'New bakery', city: 'Kochi', status: 'prospect', source: 'demo', story: "I'm opening a bakery. What insurance do I need?" };
+const COPY_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+const initials = n => n.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+const inr = v => '₹' + Number(v).toLocaleString('en-IN');
+let people = [], peopleFilter = 'all';
 
 async function loadClaims() {
   const r = await fetch('/api/state');
@@ -469,37 +506,212 @@ async function loadClaims() {
   return r.json();
 }
 
-async function renderCustomers() {
-  const { customers } = await loadClaims();
-  $('#customer-cards').innerHTML = customers.map((c, i) => `
-    <div class="card customer">
-      <h3>${esc(c.name)}</h3>
-      <p class="muted">${c.issued ? 'New policy · ' : ''}${esc(c.business)}${c.city ? ', ' + esc(c.city) : ''} · ${esc(c.kind)} · <span class="${c.active ? 'ok' : 'bad'}">${c.active ? 'Active' : 'Expired ' + esc(c.end)}</span></p>
-      <dl>
-        <dt>Policy number</dt><dd>${esc(c.policy)}</dd>
-        <dt>Mobile</dt><dd>${esc(c.mobile)}</dd>
-        <dt>OTP</dt><dd>${esc(c.otp)}</dd>
-      </dl>
-      <p class="story">“${esc(c.story)}”</p>
-      <button type="button" class="primary" data-story="${i}">Send this to the assistant</button>
-    </div>`).join('') + `
-    <div class="card customer">
-      <h3>Priya Nair</h3>
-      <p class="muted">New bakery, Kochi · no policy yet</p>
-      <p class="story">“I'm opening a bakery. What insurance do I need?”</p>
-      <p class="muted">To make her a policyholder: fill the Apply form, press Submit to HDFC ERGO (demo), then approve it on the HDFC ERGO Desk.</p>
-      <button type="button" class="primary" data-story="new">Send this to the assistant</button>
-    </div>
-    <p id="customer-msg" class="form-msg"></p>`;
-  $('#customer-cards').onclick = e => {
-    const b = e.target.closest('[data-story]');
-    if (!b) return;
-    sendToChat(b.dataset.story === 'new' ? "I'm opening a bakery. What insurance do I need?" : customers[b.dataset.story].story);
-  };
+// Everyone on the People page: policyholders, proposals still waiting, and Priya (no policy yet).
+async function loadPeople() {
+  const s = await loadClaims();
+  const pending = s.proposals.filter(p => p.status === 'Proposal received').map(p => ({
+    name: p.name, business: p.business, city: p.city, mobile: p.mobile, reference: p.reference, status: 'pending', source: 'proposal',
+    story: 'I submitted a proposal. Has HDFC ERGO accepted it?',
+  }));
+  // Priya's "no policy yet" card goes once she has a policy or a proposal waiting.
+  const priyaDone = [...s.customers, ...pending].some(p => p.name.toLowerCase() === PRIYA.name.toLowerCase());
+  people = [...s.customers, ...pending, ...(priyaDone ? [] : [PRIYA])];
+  return s;
 }
 
+const copyBtn = (value, label) => `<button type="button" class="copy" data-copy="${esc(value)}" title="Copy ${label}" aria-label="Copy ${label}">${COPY_ICON}</button>`;
+const idRow = (label, value) => `<div class="id-row"><dt>${label}</dt><dd>${esc(value)}</dd>${copyBtn(value, label.toLowerCase())}</div>`;
+const allIds = p => `Policy number ${p.policy}, mobile ${p.mobile}, OTP ${p.otp}`;
+
+function personCard(p) {
+  const i = people.indexOf(p);
+  const st = STATUS[p.status];
+  const sections = p.sections ? Object.entries(p.sections).map(([k, v]) => `${k}${v ? ' ' + inr(v) : ''}`).join(' · ') : '';
+  return `<article class="person st-${p.status}">
+    <div class="person-top">
+      <span class="avatar">${esc(initials(p.name))}</span>
+      <div class="who">
+        <h3>${esc(p.name)}</h3>
+        <p class="sub">${esc(p.business)}${p.city ? ', ' + esc(p.city) : ''}</p>
+        <div class="badges"><span class="status-chip">${st.label}</span><span class="tag">${ORIGIN[p.source] || 'Demo'}</span></div>
+      </div>
+    </div>
+    ${p.policy ? `<dl class="ids">${idRow('Policy', p.policy)}${idRow('Mobile', p.mobile)}${idRow('OTP', p.otp)}</dl>
+      <p class="facts"><strong>${esc(p.kind)}</strong>${p.addons?.length ? ' + ' + esc(p.addons.join(', ').replace(/_/g, ' and ')) : ''} · ${day(p.start)} to ${day(p.end)}<br>Sections ${esc(sections)}</p>`
+    : p.reference ? `<dl class="ids">${idRow('Proposal', p.reference)}${idRow('Mobile', p.mobile)}</dl><p class="facts">${st.note}.</p>`
+    : `<p class="facts">No policy number yet. Fill the Apply form as ${esc(p.name.split(' ')[0])}, submit it, then approve it on the HDFC ERGO Desk.</p>`}
+    <p class="story">“${esc(p.story)}”</p>
+    <div class="person-actions">
+      ${p.policy ? `<button type="button" class="btn" data-copy="${esc(allIds(p))}">Copy all</button>` : ''}
+      <button type="button" class="btn primary" data-story="${i}">Ask the assistant</button>
+      ${p.reference ? '<button type="button" class="btn" data-go="desk">Open the desk</button>' : ''}
+      ${p.source === 'added' || p.source === 'proposal' && p.policy ? `<button type="button" class="btn remove" data-remove="${esc(p.policy)}" title="Remove ${esc(p.name)}">Remove</button>` : ''}
+    </div>
+  </article>`;
+}
+
+async function renderPeople() {
+  await loadPeople();
+  const counts = Object.fromEntries(ORDER.map(k => [k, people.filter(p => p.status === k).length]));
+  $('#people-filters').innerHTML = [['all', 'All', people.length], ...ORDER.filter(k => counts[k]).map(k => [k, STATUS[k].label, counts[k]])]
+    .map(([k, l, n]) => `<button type="button" class="chip" data-filter="${k}" aria-pressed="${peopleFilter === k}">${k === 'all' ? '' : `<span class="dot st-${k}"></span>`}${l} <span class="count">${n}</span></button>`).join('');
+  drawPeople();
+}
+
+function drawPeople() {
+  const q = $('#people-search').value.trim().toLowerCase();
+  const match = p => (peopleFilter === 'all' || p.status === peopleFilter)
+    && (!q || [p.name, p.business, p.city, p.policy, p.mobile, p.reference].some(v => String(v || '').toLowerCase().includes(q)));
+  const groups = ORDER.map(k => [k, people.filter(p => p.status === k && match(p))]).filter(([, list]) => list.length);
+  $('#people-groups').innerHTML = groups.length ? groups.map(([k, list]) => `
+    <section class="group">
+      <div class="group-head"><span class="dot st-${k}"></span><h2>${STATUS[k].label}</h2><span class="count">${list.length}</span><p>${STATUS[k].note}</p></div>
+      <div class="person-grid">${list.map(personCard).join('')}</div>
+    </section>`).join('') : '<p class="empty">No one matches. Try another search, or add a person.</p>';
+}
+
+$('#people-search').addEventListener('input', drawPeople);
+$('#people-filters').addEventListener('click', e => {
+  const b = e.target.closest('[data-filter]');
+  if (!b) return;
+  peopleFilter = b.dataset.filter;
+  $('#people-filters').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === b)));
+  drawPeople();
+});
+
+// Home: a short "demo logins" list, like a sign-in page's test accounts.
+async function renderQuick() {
+  await loadPeople();
+  const pick = people.filter(p => p.source === 'demo');
+  $('#quick-people').innerHTML = pick.map(p => `
+    <div class="quick-item st-${p.status}">
+      <span class="avatar">${esc(initials(p.name))}</span>
+      <div class="who">
+        <strong>${esc(p.name)}</strong>
+        <span>${esc(p.business)}${p.city ? ', ' + esc(p.city) : ''} · <span class="status-chip">${STATUS[p.status].label}</span></span>
+        <span>${p.policy ? `<code>${esc(p.policy)}</code> · <code>${esc(p.mobile)}</code>` : 'Buying journey · no policy yet'}</span>
+      </div>
+      ${p.policy ? `<button type="button" class="copy" data-copy="${esc(allIds(p))}" title="Copy policy, mobile and OTP" aria-label="Copy ${esc(p.name)}'s details">${COPY_ICON}</button>` : ''}
+      <button type="button" class="btn" data-story="${people.indexOf(p)}">Ask</button>
+    </div>`).join('');
+}
+
+// Copy, ask the assistant, and remove: shared by Home and People.
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => { t.hidden = true; }, 1800);
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); }
+  catch {
+    const a = Object.assign(document.createElement('textarea'), { value: text });
+    document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove();
+  }
+}
+document.addEventListener('click', async e => {
+  const c = e.target.closest('[data-copy]');
+  if (c) {
+    await copyText(c.dataset.copy);
+    c.classList.add('done');
+    setTimeout(() => c.classList.remove('done'), 1200);
+    toast('Copied: ' + c.dataset.copy);
+    return;
+  }
+  const s = e.target.closest('[data-story]');
+  if (s && people[s.dataset.story]) { sendToChat(people[s.dataset.story].story); return; }
+  const r = e.target.closest('[data-remove]');
+  if (r) {
+    if (!confirm(`Remove ${r.dataset.remove}? Its claims history stays on the desk until Reset.`)) return;
+    await fetch(`/api/people/${r.dataset.remove}`, { method: 'DELETE' });
+    toast('Removed ' + r.dataset.remove);
+    renderPeople();
+  }
+});
+
+$('#remove-added').addEventListener('click', async () => {
+  if (!confirm('Remove everyone you added, and policies issued from proposals? The three demo people stay.')) return;
+  await fetch('/api/people/remove-added', { method: 'POST' });
+  toast('Added people removed');
+  renderPeople();
+});
+
+$('#export-people').addEventListener('click', () => {
+  const cols = ['name', 'business', 'city', 'policy', 'mobile', 'otp', 'kind', 'start', 'end', 'status', 'source', 'reference', 'story'];
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csv = [cols.join(','), ...people.map(p => cols.map(k => cell(k === 'status' ? STATUS[p.status].label : p[k])).join(','))].join('\r\n');
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })), download: 'vyaapar-suraksha-demo-people.csv' });
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// ---------- Add a person ----------
+const iso = d => d.toISOString().slice(0, 10);
+const shift = (days, years = 0) => { const d = new Date(); d.setFullYear(d.getFullYear() + years); d.setDate(d.getDate() + days); return iso(d); };
+// Quick status buttons set a start date and tenure that land the policy in that group.
+const QUICK = { active: [shift(-30), 1], expiring: [shift(14, -1), 1], expired: [shift(-30, -1), 1], upcoming: [shift(15), 1] };
+
+function renderPersonSections() {
+  $('#person-sections').innerHTML = DATA.sections.filter(s => s.id !== 'i').map(s => `
+    <label class="section-pick"><input type="checkbox" name="sec" value="${s.id.toUpperCase()}">
+      <span>${s.id.toUpperCase()} ${esc(s.name)}</span>
+      <input type="number" name="si_${s.id.toUpperCase()}" min="0" placeholder="₹" aria-label="Sum insured for Section ${s.id.toUpperCase()}" disabled></label>`).join('');
+}
+$('#person-sections').addEventListener('change', e => {
+  if (e.target.name === 'sec') e.target.closest('label').querySelector('[type="number"]').disabled = !e.target.checked;
+});
+
+const dialog = $('#person-dialog');
+$('#add-person').addEventListener('click', () => {
+  $('#person-form').reset();
+  $('#person-msg').textContent = '';
+  $('#person-sections').querySelectorAll('[type="number"]').forEach(n => { n.disabled = true; });
+  $('[name="start"]', dialog).value = QUICK.active[0];
+  dialog.querySelectorAll('[data-quick]').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.quick === 'active')));
+  dialog.showModal();
+});
+dialog.addEventListener('click', e => {
+  if (e.target.closest('[data-close]') || e.target === dialog) dialog.close();
+  const q = e.target.closest('[data-quick]');
+  if (q) {
+    const [start, years] = QUICK[q.dataset.quick];
+    $('[name="start"]', dialog).value = start; $('[name="tenure"]', dialog).value = years;
+    dialog.querySelectorAll('[data-quick]').forEach(c => c.setAttribute('aria-pressed', String(c === q)));
+  }
+});
+
+$('#person-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = new FormData(e.target), g = k => (f.get(k) || '').trim();
+  const missing = [['name', 'full name'], ['mobile', 'mobile'], ['start', 'start date']].filter(([k]) => !g(k)).map(([, l]) => l);
+  if (missing.length) { $('#person-msg').textContent = 'Please fill: ' + missing.join(', '); return; }
+  if (g('mobile').replace(/\D/g, '').length !== 10) { $('#person-msg').textContent = 'The mobile needs 10 digits.'; return; }
+  const sections = { I: Number(g('si_I')) || 0 };
+  f.getAll('sec').forEach(k => { sections[k] = Number(g(`si_${k}`)) || 0; });
+  const btn = e.submitter; btn.disabled = true;
+  const r = await fetch('/api/people', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+    name: g('name'), mobile: g('mobile'), business: g('business') || 'Business', city: g('city'), kind: g('kind'),
+    addons: f.getAll('addon'), sections, start: g('start'), tenure: g('tenure'), jewelleryInsured: f.has('jewelleryInsured'), story: g('story'),
+  }) }).catch(() => null);
+  btn.disabled = false;
+  if (!r?.ok) { $('#person-msg').textContent = 'Could not add this person. Please check the details and try again.'; return; }
+  const p = await r.json();
+  dialog.close();
+  peopleFilter = 'all';
+  $('#people-search').value = '';
+  await renderPeople();
+  toast(`${p.name} added: ${p.policy}`);
+});
+
+// ---------- HDFC ERGO Desk ----------
 async function renderDesk() {
   const { claims, callbacks, statuses, proposals } = await loadClaims();
+  const waiting = proposals.filter(p => p.status === 'Proposal received').length;
+  const open = claims.filter(c => !['Settled', 'Closed – not payable'].includes(c.status)).length;
+  $('#desk-stats').innerHTML = [
+    ['Proposals waiting', waiting, waiting > 0], ['Open claims', open, false], ['Call-backs', callbacks.length, callbacks.length > 0], ['Claims registered', claims.length, false],
+  ].map(([l, n, alert]) => `<div class="stat ${alert ? 'alert' : ''}"><span>${l}</span><strong>${n}</strong></div>`).join('');
   $('#desk-proposals').innerHTML = proposals.length ? proposals.map(p => `
     <div class="card claim">
       <div class="claim-head">
@@ -508,9 +720,9 @@ async function renderDesk() {
         <span class="muted">${when(p.at)}</span>
       </div>
       <p><strong>${esc(p.name)}</strong> · ${esc(p.business)}${p.city ? ', ' + esc(p.city) : ''} · mobile ${esc(p.mobile)}</p>
-      <p>${esc(p.kind)}${p.addons.length ? ' + ' + esc(p.addons.join(', ').replace(/_/g, ' and ')) : ''} · ${p.years} year${p.years > 1 ? 's' : ''} · ${Object.entries(p.sections).map(([k, v]) => `Section ${k}${v ? ' ₹' + Number(v).toLocaleString('en-IN') : ''}`).join(', ')}</p>
+      <p>${esc(p.kind)}${p.addons.length ? ' + ' + esc(p.addons.join(', ').replace(/_/g, ' and ')) : ''} · ${p.years} year${p.years > 1 ? 's' : ''} · ${Object.entries(p.sections).map(([k, v]) => `Section ${k}${v ? ' ' + inr(v) : ''}`).join(', ')}</p>
       ${p.status === 'Proposal received' ? `<div class="actions"><button type="button" class="primary" data-decide="${esc(p.reference)}/approve">Approve and issue policy</button><button type="button" data-decide="${esc(p.reference)}/decline">Decline</button></div>` : ''}
-    </div>`).join('') : '<p class="muted">No proposals yet. Fill the Apply form as Priya and press Submit to HDFC ERGO (demo).</p>';
+    </div>`).join('') : '<p class="empty">No proposals yet. Fill the Apply form as Priya and press Submit to HDFC ERGO (demo).</p>';
   $('#desk-claims').innerHTML = claims.length ? claims.map(c => `
     <div class="card claim">
       <div class="claim-head">
@@ -519,17 +731,17 @@ async function renderDesk() {
         <span class="muted">${when(c.registered_at)}</span>
       </div>
       <p><strong>${esc(c.customer)}</strong> · ${esc(c.business)} · ${esc(c.policy)}</p>
-      <p>${esc(c.eventLabel)} on ${esc(c.incident_date)}${c.items.length ? ' · ' + esc(c.items.join(', ').replace(/_/g, ' ')) : ''}${c.estimated_loss ? ' · about ₹' + Number(c.estimated_loss).toLocaleString('en-IN') : ''}</p>
+      <p>${esc(c.eventLabel)} on ${esc(c.incident_date)}${c.items.length ? ' · ' + esc(c.items.join(', ').replace(/_/g, ' ')) : ''}${c.estimated_loss ? ' · about ' + inr(c.estimated_loss) : ''}</p>
       ${c.description ? `<p class="muted">“${esc(c.description)}”</p>` : ''}
       ${c.reasons.length ? `<ul>${c.reasons.map(r => `<li>${esc(r.reason)} <span class="muted">(${esc(r.source)})</span></li>`).join('')}</ul>` : ''}
       ${c.notes.length ? `<ul>${c.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
       <label class="status">Status
         <select data-ref="${esc(c.reference)}">${statuses.map(s => `<option ${s === c.status ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
       </label>
-    </div>`).join('') : '<p class="muted">No claims yet. Register one in the chat as Ramesh, Sunita or Imran.</p>';
+    </div>`).join('') : '<p class="empty">No claims yet. Register one in the chat as a policyholder from the People page.</p>';
   $('#desk-callbacks').innerHTML = callbacks.length ? `<ul class="callbacks">${callbacks.map(b => `
     <li><strong>${esc(b.reference)}</strong> · ${esc(b.customer)} (${esc(b.policy)}) · mobile ${esc(b.mobile)} · ${when(b.at)}<br>${esc(b.reason)}</li>`).join('')}</ul>`
-    : '<p class="muted">No call-back requests.</p>';
+    : '<p class="empty">No call-back requests.</p>';
 }
 
 $('#desk-proposals').addEventListener('click', async e => {
@@ -547,18 +759,8 @@ $('#desk-claims').addEventListener('change', async e => {
   renderDesk();
 });
 
-// Load a tab's data when it opens; the desk refreshes every few seconds while it is open, so new claims appear by themselves.
-document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
-  clearInterval(deskTimer);
-  const fail = el => () => { $(el).innerHTML = '<p class="muted">The claims service is not available on this server.</p>'; };
-  if (t.dataset.view === 'customers') renderCustomers().catch(fail('#customer-cards'));
-  if (t.dataset.view === 'desk') {
-    renderDesk().catch(fail('#desk-claims'));
-    deskTimer = setInterval(() => { if (!document.activeElement?.matches('select[data-ref]')) renderDesk().catch(() => {}); }, 4000);
-  }
-}));
-
-// Reset: forget the conversation in this browser, put the made-up policy records back, clear all claims, and start again from a clean page.
+// Reset: forget the conversation in this browser, clear claims, call-backs and proposals, and start again from a clean page.
+// People added on the People page stay until removed there.
 document.getElementById('reset').addEventListener('click', async () => {
   await fetch('/api/reset', { method: 'POST' }).catch(() => {});
   Perfox('shutdown');
@@ -567,3 +769,5 @@ document.getElementById('reset').addEventListener('click', async () => {
     .forEach(k => localStorage.removeItem(k));
   location.replace(location.pathname);
 });
+
+show(store.get('vs_classic') ? 'guide' : 'home');
