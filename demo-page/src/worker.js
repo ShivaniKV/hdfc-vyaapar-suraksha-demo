@@ -508,7 +508,12 @@ export class ClaimsStore extends DurableObject {
       const given = Object.fromEntries(Object.entries(a).filter(([, v]) => v !== undefined && v !== null && v !== ''));
       a = { ...(session.lastCheck || {}), ...given };
       const r = checkClaim(me, a);
+      // The same loss registered twice in one chat (a repeated confirm, or an old Confirm button) keeps its first reference.
+      const key = JSON.stringify([me.policy, r.event, r.incident_date, [...r.items].sort()]);
+      const dup = session.registered?.key === key && s.claims.find(c => c.reference === session.registered.reference);
+      if (dup) return { ok: true, claim_reference: dup.reference, result: dup.result, already_registered: true, say: `This loss is already registered as ${dup.reference}. Give the customer that reference; do not register it again.` };
       const reference = `CLM-2026-${String(s.next++).padStart(4, '0')}`;
+      session.registered = { key, reference };
       const now = new Date().toISOString();
       s.claims.unshift({
         reference, policy: me.policy, customer: me.name, business: me.business, ...r,
