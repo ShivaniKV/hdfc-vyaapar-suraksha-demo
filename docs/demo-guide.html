@@ -72,12 +72,19 @@
 
 <h3>Demo logins (also on the People page as copy cards)</h3>
 <table>
-  <tr><th>Person</th><th>Policy number</th><th>Mobile</th><th>What it shows</th></tr>
-  <tr><td>Ramesh Jain, jewellery shop, Jaipur</td><td><code>VS-2026-10001</code></td><td><code>9829000001</code></td><td>All Risk, jewellery insured: theft is <span class="tag g">likely covered</span></td></tr>
-  <tr><td>Sunita Sharma, kirana store, Patna</td><td><code>VS-2026-10002</code></td><td><code>9835000002</code></td><td>Named Perils, no flood add-on: rain damage is <span class="tag r">likely not covered</span></td></tr>
-  <tr><td>Imran Khan, electronics, Pune</td><td><code>VS-2025-10003</code></td><td><code>9822000003</code></td><td>Policy expired on 30 Sep 2026: fire is <span class="tag r">likely not covered</span></td></tr>
+  <tr><th>Person</th><th>Policy number</th><th>Mobile</th><th>What their filled form says</th></tr>
+  <tr><td>Ramesh Jain, jewellery shop, Jaipur</td><td><code>VS-2026-10001</code></td><td><code>9829000001</code></td><td>All Risk; Section II with jewellery specifically insured and the Theft Extension; Section XI Money</td></tr>
+  <tr><td>Sunita Sharma, kirana store, Patna</td><td><code>VS-2026-10002</code></td><td><code>9835000002</code></td><td>Named Perils with no storm and flood add-on; Section II without jewellery or Theft Extension</td></tr>
+  <tr><td>Imran Khan, electronics, Pune</td><td><code>VS-2025-10003</code></td><td><code>9822000003</code></td><td>Named Perils; the policy ended on 30 Sep 2026 and was not renewed</td></tr>
 </table>
-<p>The OTP for everyone is <code>123456</code>.</p>
+<p>The OTP for everyone is <code>123456</code>. Each card on the People page has <b>View filled form</b>, which opens the proposal form that person filled in. The assistant judges every claim from that form, so nobody needs a script: let the customer describe what happened in their own words.</p>
+<table>
+  <tr><th>If the customer says…</th><th>Ramesh</th><th>Sunita</th><th>Imran</th></tr>
+  <tr><td>Thieves broke in and took jewellery</td><td><span class="tag g">likely covered</span></td><td><span class="tag r">not covered</span>: jewellery not specifically insured</td><td rowspan="4"><span class="tag r">not covered</span>: the policy had ended</td></tr>
+  <tr><td>Thieves broke in and took stock</td><td><span class="tag g">likely covered</span></td><td><span class="tag g">likely covered</span></td></tr>
+  <tr><td>Something was taken from the counter, with no break-in</td><td><span class="tag g">likely covered</span>: has the Theft Extension</td><td><span class="tag r">not covered</span>: no Theft Extension</td></tr>
+  <tr><td>Rain or flood damaged the stock</td><td><span class="tag g">likely covered</span>: All Risk</td><td><span class="tag r">not covered</span>: no flood add-on</td></tr>
+</table>
 
 <h2 class="pb">The demo, act by act</h2>
 <p class="muted">Type each message once and wait for the reply (3 to 15 seconds). If a reply looks cut off, click <b>New chat</b> and ask again.</p>
@@ -114,13 +121,9 @@
 
 <div class="act">
   <h3><span class="n">5</span> The claim at 11 pm (the main moment) <span class="time">5 min</span></h3>
-  <p>Click <b>New chat</b>. Play Ramesh:</p>
-  <span class="t">Someone broke into my shop last night and took jewellery</span>
-  <p>It first checks everyone is safe and asks if there is a policy. Then:</p>
-  <span class="t">Yes. VS-2026-10001, mobile 9829000001</span>
-  <span class="t">123456</span>
-  <span class="t">Gold jewellery worth about 3 lakh was taken from the display counter, last night.</span>
-  <p>It says <b>likely covered</b>, that HDFC ERGO's surveyor decides, what to do now (FIR, don't clear the scene, keep bills) and asks to register.</p>
+  <p>On People, open Ramesh's <b>View filled form</b> so the audience sees what he declared. Click <b>New chat</b> and play Ramesh in your own words, for example <i>"My jewellery shop was robbed last night."</i></p>
+  <p>It checks everyone is safe, then asks for his name, policy number and registered mobile, and sends an OTP. Give <b>Ramesh Jain</b>, <code>VS-2026-10001</code>, <code>9829000001</code>, then <code>123456</code>. A wrong name is refused, which is worth showing once.</p>
+  <p>Answer its questions naturally: what was taken, roughly its value, whether they broke in. It checks the policy was active on that date, reads his form (jewellery specifically insured) and says <b>likely covered</b>, that HDFC ERGO's surveyor decides, what to do now (FIR, don't clear the scene, keep bills), and asks to register.</p>
   <span class="t">Yes, register it</span>
   <p>It gives a reference like <code>CLM-2026-0412</code>. Switch to the <b>Desk</b>: the claim is there with the reasons and the customer's own words. Change its status to <b>Surveyor assigned</b>. Back in the chat:</p>
   <span class="t">What is the status of my claim?</span>
@@ -129,9 +132,8 @@
 
 <div class="act">
   <h3><span class="n">6</span> It's honest when the answer is no <span class="time">2 min</span></h3>
-  <p>New chat, as Sunita (<code>VS-2026-10002</code>, <code>9835000002</code>, OTP <code>123456</code>):</p>
-  <span class="t">Heavy rain water entered my shop and all my stock is spoiled</span>
-  <p>Likely <b>not</b> covered, because her Named Perils policy has no storm and flood add-on, with the page reference. It still offers to register the claim.</p>
+  <p>New chat, as Sunita (<b>Sunita Sharma</b>, <code>VS-2026-10002</code>, <code>9835000002</code>, OTP <code>123456</code>). Tell the <b>same story</b> Ramesh told: jewellery stolen in a break-in. This time it is likely <b>not</b> covered, because her form says jewellery is not specifically insured. Then try rain damaging her stock: not covered either, because she has no storm and flood add-on.</p>
+  <div class="wow">Same words, different answer, because each answer comes from what that customer actually bought. It still offers to register the claim.</div>
   <div class="say">"It never says approved or rejected and never promises an amount. It tells the customer the likely position and why, and reporting the loss is always their right."</div>
 </div>
 
@@ -143,7 +145,7 @@
 
 <div class="act">
   <h3><span class="n">8</span> Let them try it <span class="time">2 min, optional</span></h3>
-  <p>On <b>People</b>, click <b>+ Add a person</b> and use a name someone in the room suggests, with any 10-digit mobile and a status chip (Active, Expiring, Expired, Upcoming). Hand them the laptop: they copy the policy number from the new card and make a claim themselves.</p>
+  <p>On <b>People</b>, click <b>+ Add a person</b> and let someone in the room choose: a name, any 10-digit mobile, a status (Active, Expiring, Expired, Upcoming), Section II, and whether jewellery and the Theft Extension are included. Hand them the laptop: they copy the policy number from the new card and report any loss they like. The answer follows what they just ticked.</p>
   <div class="wow">Nothing is scripted when the audience makes up the customer. This convinces people more than anything else.</div>
 </div>
 
@@ -179,6 +181,7 @@
 
 <h2>What was tested (11 Nov 2026)</h2>
 <ul>
+  <li><b>Claims from the filled form, 13 more checks, all passing:</b> every person carries their form; wrong name refused; first name or a Hindi-script name accepted; break-in versus no break-in with and without the Theft Extension; forms and answers kept from the Add-a-person dialog and from Apply through to the issued policy.</li>
   <li><b>Back end, 70 automated checks, all passing:</b> pages and form PDF; the new chat widget; Reset; the seven tools; wrong mobile, lookup by name and wrong OTP refused; lockout after three wrong OTPs; spoken digits in English, Hindi and Devanagari; Ramesh, Sunita and Imran outcomes; the 30-day and empty-premises rules; loss above sum insured; a customer can't see another's claims; Desk status changes reach the assistant; adding active, expired and upcoming people; proposal approve and decline.</li>
   <li><b>Live chat on the real agent:</b> the full claim (verify, check, register, Desk status change, status reply); the burglary exclusions with source; a Hindi answer in Hindi script; a Hinglish answer that won't recommend.</li>
   <li><b>Fixed during testing:</b> a policy that hasn't started yet was described as Active; wrong section numbers in one chat answer (now prevented by the prompt).</li>
