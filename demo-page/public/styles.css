@@ -244,7 +244,16 @@ h2 { font-size: 18px; margin: 0 0 10px; }
 .copy.done { color: var(--green); border-color: var(--green); background: var(--green-soft); }
 .facts { margin: 0; font-size: 13px; color: var(--muted); }
 .facts strong { color: var(--ink); font-weight: 600; }
-.story { margin: 0; padding: 10px 12px; font-size: 13.5px; font-style: italic; background: var(--accent-soft); border-radius: 10px; color: #5a1220; }
+.form-details { border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font-size: 13px; }
+.form-details summary { cursor: pointer; padding: 9px 12px; font-weight: 600; color: var(--navy-2); list-style: none; display: flex; align-items: center; gap: 8px; }
+.form-details summary::-webkit-details-marker { display: none; }
+.form-details summary::before { content: ''; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform .15s; }
+.form-details[open] summary::before { transform: rotate(45deg); }
+.form-details[open] summary { border-bottom: 1px solid var(--line); }
+.form-details h4 { margin: 10px 12px 2px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.form-details ul { margin: 0 12px 6px; padding-left: 16px; }
+.form-details li { margin: 2px 0; color: var(--ink); }
+.form-details[open] { padding-bottom: 6px; }
 .person-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
 .person-actions .btn { padding: 8px 12px; font-size: 13px; }
 .person-actions .remove { margin-left: auto; color: var(--muted); }

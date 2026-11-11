@@ -13,24 +13,46 @@ const CUSTOMERS = [
     policy: 'VS-2026-10001', mobile: '9829000001',
     start: '2026-04-01', end: '2027-03-31', kind: 'All Risk', addons: [],
     sections: { I: 4000000, II: 2500000, XI: 200000 },
-    jewelleryInsured: true,
-    story: 'Someone broke into my shop last night and took jewellery',
+    jewelleryInsured: true, theftExtension: true,
+    form: [
+      ['About you', ['Ramesh Jain, 14 Johari Bazaar, Jaipur 302003', '9829000001 · ramesh.jain@example.com', 'Self-employed, jewellery retail', 'Tenure 1 year, start 1 Apr 2026']],
+      ['Section I', ['All Risk', 'Building basis: Reinstatement value; contents basis: Reinstatement value', 'Furniture and fittings ₹5,00,000; Finished stock ₹35,00,000', 'Locations 1; floater No; declaration No']],
+      ['Premises', ['RCC construction, ground floor; CCTV Yes; 24x7 guard No; fire station within 2 km', 'Fire protection: Fire extinguishers']],
+      ['Section II Burglary and House Breaking', ['Sum insured ₹25,00,000, market value', 'Gold, silver, jewellery or precious stones specifically insured: Yes (₹25,00,000)', 'CCTV or burglar alarm: Yes; iron grills and locks: Yes; stock books: Yes', 'Premises ever left unoccupied: No', 'Add-ons: Theft extension']],
+      ['Section XI Money', ['Cash in safe limit ₹1,50,000; cash in till ₹50,000', 'Safe fixed to the floor: Yes; keys removed after hours: Yes']],
+      ['Add-ons', ['None']],
+      ['Nominee', ['Sushila Jain (wife)']],
+    ],
   },
   {
     name: 'Sunita Sharma', business: 'Kirana store', city: 'Patna',
     policy: 'VS-2026-10002', mobile: '9835000002',
     start: '2026-06-01', end: '2027-05-31', kind: 'Named Perils', addons: [],
     sections: { I: 800000, II: 200000 },
-    jewelleryInsured: false,
-    story: 'Heavy rain water entered my shop and all my stock is spoiled',
+    jewelleryInsured: false, theftExtension: false,
+    form: [
+      ['About you', ['Sunita Sharma, Shop 3, Boring Road, Patna 800001', '9835000002 · sunita.kirana@example.com', 'Self-employed, grocery retail', 'Tenure 1 year, start 1 Jun 2026']],
+      ['Section I', ['Named Perils, no storm and flood or earthquake add-on', 'Contents basis: Reinstatement value', 'Furniture and fittings ₹1,50,000; Finished stock ₹6,50,000', 'Locations 1']],
+      ['Premises', ['Brick construction, ground floor; CCTV No; guard No', 'Storage: stock above floor level No; on racks Yes; plinth raised above ground No', 'Fire protection: Fire extinguishers']],
+      ['Section II Burglary and House Breaking', ['Sum insured ₹2,00,000, market value', 'Gold, silver, jewellery or precious stones specifically insured: No', 'CCTV or burglar alarm: No; iron grills and locks: Yes', 'Premises ever left unoccupied: No', 'Add-ons: None']],
+      ['Add-ons', ['None']],
+      ['Nominee', ['Rakesh Sharma (husband)']],
+    ],
   },
   {
     name: 'Imran Khan', business: 'Electronics shop', city: 'Pune',
     policy: 'VS-2025-10003', mobile: '9822000003',
     start: '2025-10-01', end: '2026-09-30', kind: 'Named Perils', addons: [],
     sections: { I: 1500000, II: 300000, IV: 200000 },
-    jewelleryInsured: false,
-    story: 'There was a fire in my godown, what do I do?',
+    jewelleryInsured: false, theftExtension: false,
+    form: [
+      ['About you', ['Imran Khan, 22 FC Road, Pune 411004', '9822000003 · imran.electronics@example.com', 'Self-employed, electronics retail', 'Tenure 1 year, start 1 Oct 2025 (not renewed)']],
+      ['Section I', ['Named Perils, no add-ons', 'Contents basis: Reinstatement value', 'Furniture and fittings ₹3,00,000; Finished stock ₹12,00,000', 'Locations 2 (shop and godown)']],
+      ['Premises', ['RCC construction, first floor; CCTV Yes; guard No', 'Fire protection: Fire extinguishers, smoke detectors']],
+      ['Section II Burglary and House Breaking', ['Sum insured ₹3,00,000, market value', 'Gold, silver, jewellery or precious stones specifically insured: No', 'Premises ever left unoccupied: No', 'Add-ons: None']],
+      ['Section IV Electronic Equipment', ['Replacement value ₹2,00,000']],
+      ['Nominee', ['Ayesha Khan (wife)']],
+    ],
   },
 ];
 const DEMO_OTP = '123456';
@@ -105,6 +127,9 @@ function checkClaim(c, a) {
   if (event === 'burglary_theft' && items.includes('jewellery_gold') && !c.jewelleryInsured) {
     fail('Under Section II, gold, silver, jewellery and precious stones are excluded unless specifically insured. They are not specifically insured on this policy.', 'Policy Wordings, Section II, page 26');
   }
+  if (event === 'burglary_theft' && a.forced_entry === false && !c.theftExtension) {
+    fail('Section II covers theft only after a forcible and violent entry or exit, or a hold-up. Theft without a break-in needs the Theft Extension, which this policy does not have.', 'Policy Wordings, Section II, page 25; Optional Wordings, Theft Extension Clause, page 13');
+  }
   // 5. Premises occupied.
   if (Number(a.premises_unoccupied_days) > 30) {
     fail('Loss or damage is excluded if the premises were empty for more than 30 days without HDFC ERGO\'s written approval.', 'Policy Wordings, Section I, page 5');
@@ -153,8 +178,8 @@ const DO_NOW = [
 const TOOLS = [
   {
     name: 'start_verification',
-    description: 'Start verifying an existing policyholder. Call this when the customer says they already have a Vyaapar Suraksha policy and wants help with their own policy or claim, once they have given their policy number and registered mobile number. Sends a one-time password (OTP) to their mobile.',
-    input_schema: { type: 'object', properties: { policy_number: { type: 'string', description: 'e.g. VS-2026-10001' }, mobile: { type: 'string', description: 'Registered mobile number' } }, required: ['policy_number', 'mobile'] },
+    description: 'Start verifying an existing policyholder. Call this when the customer says they already have a Vyaapar Suraksha policy and wants help with their own policy or claim, once they have given their name, policy number and registered mobile number. Checks the name against the policy and sends a one-time password (OTP) to their mobile.',
+    input_schema: { type: 'object', properties: { name: { type: 'string', description: 'The name the customer gave' }, policy_number: { type: 'string', description: 'e.g. VS-2026-10001' }, mobile: { type: 'string', description: 'Registered mobile number' } }, required: ['policy_number', 'mobile'] },
   },
   {
     name: 'verify_otp',
@@ -179,6 +204,7 @@ const TOOLS = [
         estimated_loss: { type: 'number', description: 'Rough loss in rupees, if given' },
         property_value: { type: 'number', description: 'Total value of that property, if given' },
         premises_unoccupied_days: { type: 'integer', description: 'Only if the premises were empty before the loss' },
+        forced_entry: { type: 'boolean', description: 'For a theft: true if the thief broke in or it was a hold-up, false if things were taken without a break-in (e.g. from the counter during business hours). Ask the customer if it is not clear.' },
       },
       required: ['event', 'items'],
     },
@@ -196,6 +222,7 @@ const TOOLS = [
         estimated_loss: { type: 'number' },
         property_value: { type: 'number' },
         premises_unoccupied_days: { type: 'integer' },
+        forced_entry: { type: 'boolean' },
         description: { type: 'string', description: 'What happened, in one or two sentences, in English' },
       },
       required: ['event', 'items', 'description'],
@@ -241,6 +268,12 @@ function digitsOf(v) {
   }
   return out;
 }
+// The name given must share a word (3+ letters) with the policyholder's name. Names in Hindi script can't be compared, so they pass.
+function nameMatches(given, actual) {
+  const words = s => String(s || '').toLowerCase().split(/[^a-z]+/).filter(w => w.length >= 3);
+  const g = words(given);
+  return !g.length || g.some(w => words(actual).includes(w));
+}
 // Match the policy number exactly, or by its digits alone (speech often loses or garbles the "VS").
 const findCustomer = (policy, s) => {
   const d = digitsOf(policy);
@@ -262,14 +295,22 @@ function readProposal(p) {
     mobile, kind: p.kind === 'All Risk' ? 'All Risk' : 'Named Perils',
     addons: (p.addons || []).filter(a => ['storm_flood', 'earthquake'].includes(a)),
     sections, start: /^\d{4}-\d{2}-\d{2}$/.test(p.start || '') ? p.start : null, years: Math.min(5, Math.max(1, parseInt(p.tenure) || 1)),
+    jewelleryInsured: !!p.jewelleryInsured, theftExtension: !!p.theftExtension, form: readForm(p.form),
   };
+}
+
+// The filled proposal form, as headed groups of lines: [[heading, [line, ...]], ...].
+function readForm(f) {
+  if (!Array.isArray(f)) return [];
+  return f.slice(0, 12).filter(g => Array.isArray(g) && Array.isArray(g[1]))
+    .map(([h, lines]) => [String(h).slice(0, 80), lines.slice(0, 20).map(l => String(l).slice(0, 400))]);
 }
 
 // A person added on the People page: a proposal's fields plus a required start date (a past one makes an expired policy).
 function readPerson(p) {
   const r = readProposal(p);
   if (!r || !r.start) return null;
-  return { ...r, jewelleryInsured: !!p.jewelleryInsured, story: String(p.story || '').trim().slice(0, 200) || 'I want to check what my policy covers' };
+  return r;
 }
 
 // Storage: 'state' holds claims, call-backs, sessions and proposals (Reset clears it);
@@ -291,7 +332,7 @@ export class ClaimsStore extends DurableObject {
     const person = {
       name: p.name, business: p.business, city: p.city, policy, mobile: p.mobile,
       start: p.start, end: endFor(p.start, p.years), kind: p.kind, addons: p.addons, sections: p.sections,
-      jewelleryInsured: !!p.jewelleryInsured, story: p.story || 'I want to check what my new policy covers',
+      jewelleryInsured: !!p.jewelleryInsured, theftExtension: !!p.theftExtension, form: p.form || [],
       source, proposal: p.reference, added_at: new Date().toISOString(),
     };
     s.people.list.push(person);
@@ -306,7 +347,8 @@ export class ClaimsStore extends DurableObject {
       return json({
         customers: allCustomers(s).map(c => ({
           name: c.name, business: c.business, city: c.city, policy: c.policy, mobile: c.mobile, otp: DEMO_OTP,
-          kind: c.kind, addons: c.addons, sections: c.sections, start: c.start, end: c.end, story: c.story,
+          kind: c.kind, addons: c.addons, sections: c.sections, start: c.start, end: c.end,
+          jewelleryInsured: !!c.jewelleryInsured, theftExtension: !!c.theftExtension, form: c.form || [],
           source: c.source || 'demo', status: statusOf(c),
         })),
         claims: s.claims, callbacks: s.callbacks, statuses: STATUSES, proposals: s.proposals, today: today(),
@@ -408,7 +450,7 @@ export class ClaimsStore extends DurableObject {
     const s = await this.state();
     const session = s.sessions[conv] || (s.sessions[conv] = {});
     const me = session.verified && findCustomer(session.verified, s);
-    const needVerified = { ok: false, error: 'not_verified', say: 'Ask for the policy number and registered mobile number, then call start_verification.' };
+    const needVerified = { ok: false, error: 'not_verified', say: 'Ask for their name, policy number and registered mobile number, then call start_verification.' };
 
     if (name === 'start_verification') {
       const c = findCustomer(a.policy_number, s);
@@ -418,6 +460,7 @@ export class ClaimsStore extends DurableObject {
       if (c && session.pending === c.policy && otp) return this.call('verify_otp', { otp }, conv);
       const mobile = otp && digits.length === 16 ? digits.slice(0, 10) : digits.slice(-10);
       if (!c || c.mobile !== mobile) return { ok: false, say: 'No policy matches that policy number and mobile number. Ask the customer to check both, or contact HDFC ERGO on 022 6158 2020 / 022 6234 6234.' };
+      if (!nameMatches(a.name, c.name)) return { ok: false, say: 'The name does not match the name on this policy. Ask the customer to give the policyholder\'s name as on the policy. Do not reveal the name on the policy.' };
       session.pending = c.policy; session.tries = 0;
       await this.save(s);
       return { ok: true, say: `An OTP has been sent to the mobile number ending ${c.mobile.slice(-4)}. Ask the customer to tell you the OTP.`, next: 'When the customer sends the 6-digit OTP, call verify_otp with it. Do not call start_verification again.' };
@@ -429,7 +472,7 @@ export class ClaimsStore extends DurableObject {
         session.tries = (session.tries || 0) + 1;
         if (session.tries >= 3) delete session.pending;
         await this.save(s);
-        return { ok: false, say: session.tries >= 3 ? 'Too many wrong OTPs. Ask the customer to start again with their policy number and mobile.' : 'That OTP is not correct. Ask the customer to check it and try again.' };
+        return { ok: false, say: session.tries >= 3 ? 'Too many wrong OTPs. Ask the customer to start again with their name, policy number and mobile.' : 'That OTP is not correct. Ask the customer to check it and try again.' };
       }
       session.verified = session.pending; delete session.pending;
       await this.save(s);
@@ -443,7 +486,8 @@ export class ClaimsStore extends DurableObject {
         ok: true, policy_number: me.policy, name: me.name, business: `${me.business}, ${me.city}`,
         period: `${me.start} to ${me.end}`, status: { upcoming: `Not started yet; cover starts on ${me.start}`, active: 'Active', expiring: `Active, ends soon on ${me.end}`, expired: `Expired on ${me.end}` }[statusOf(me)],
         section_I_kind: me.kind, add_ons: me.addons.length ? me.addons : 'None (no storm and flood, no earthquake add-on)',
-        sections: Object.entries(me.sections).map(([k, v]) => `Section ${k} ${SECTION_NAMES[k] || ''}: sum insured ${v ? rupees(v) : 'not stated'}${k === 'II' ? (me.jewelleryInsured ? ' (jewellery specifically insured)' : ' (jewellery not specifically insured)') : ''}`),
+        sections: Object.entries(me.sections).map(([k, v]) => `Section ${k} ${SECTION_NAMES[k] || ''}: sum insured ${v ? rupees(v) : 'not stated'}${k === 'II' ? `${me.jewelleryInsured ? ' (jewellery specifically insured' : ' (jewellery not specifically insured'}${me.theftExtension ? ', with Theft Extension)' : ', no Theft Extension)'}` : ''}`),
+        proposal_form: (me.form || []).map(([h, lines]) => `${h}: ${lines.join('; ')}`),
       };
     }
     if (name === 'check_claim') {

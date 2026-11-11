@@ -302,6 +302,11 @@ $('#review').addEventListener('click', e => {
 let proposalTimer;
 async function submitProposal(btn) {
   const f = lastForm, g = k => f.get(k) || '';
+  // A section's answer found by its question label (a list for tick-box questions).
+  const answer = (id, label, many) => {
+    const i = DATA.sections.find(s => s.id === id).questions.findIndex(([l]) => label.test(l));
+    return many ? f.getAll(`s_${id}_${i}`) : f.get(`s_${id}_${i}`) || '';
+  };
   // Sum insured for each chosen section: its first rupee amount on the form (not the "If yes…" follow-ups).
   const sections = { I: ['v_building', 'v_machinery', 'v_furniture', 'v_raw', 'v_process', 'v_finished', 'v_other'].reduce((t, k) => t + Number(g(k) || 0), 0) };
   DATA.sections.filter(s => chosen.has(s.id)).forEach(s => {
@@ -312,6 +317,8 @@ async function submitProposal(btn) {
   const r = await fetch('/api/proposals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
     name: g('name'), mobile: g('mobile'), business: g('industry'), city: g('address').split(',').pop().trim(), kind: g('kind'),
     addons: f.getAll('perils_extra').map(a => /storm/i.test(a) ? 'storm_flood' : 'earthquake'), sections, start: g('start'), tenure: g('tenure'),
+    jewelleryInsured: chosen.has('ii') && answer('ii', /jewellery/i) === 'Yes', theftExtension: chosen.has('ii') && answer('ii', /^Add-ons/, true).includes('Theft extension'),
+    form: lastGroups,
   }) }).catch(() => null);
   if (!r?.ok) { btn.disabled = false; $('#form-msg').textContent = 'The proposal could not be submitted. Check the mobile number and try again.'; return; }
   btn.textContent = 'Submitted';
@@ -494,7 +501,7 @@ const STATUS = {
 };
 const ORDER = ['active', 'expiring', 'upcoming', 'expired', 'pending', 'prospect'];
 const ORIGIN = { demo: 'Demo', added: 'Added', proposal: 'From proposal' };
-const PRIYA = { name: 'Priya Nair', business: 'New bakery', city: 'Kochi', status: 'prospect', source: 'demo', story: "I'm opening a bakery. What insurance do I need?" };
+const PRIYA = { name: 'Priya Nair', business: 'New bakery', city: 'Kochi', status: 'prospect', source: 'demo' };
 const COPY_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
 const initials = n => n.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
 const inr = v => '₹' + Number(v).toLocaleString('en-IN');
@@ -510,8 +517,7 @@ async function loadClaims() {
 async function loadPeople() {
   const s = await loadClaims();
   const pending = s.proposals.filter(p => p.status === 'Proposal received').map(p => ({
-    name: p.name, business: p.business, city: p.city, mobile: p.mobile, reference: p.reference, status: 'pending', source: 'proposal',
-    story: 'I submitted a proposal. Has HDFC ERGO accepted it?',
+    name: p.name, business: p.business, city: p.city, mobile: p.mobile, reference: p.reference, status: 'pending', source: 'proposal', form: p.form,
   }));
   // Priya's "no policy yet" card goes once she has a policy or a proposal waiting.
   const priyaDone = [...s.customers, ...pending].some(p => p.name.toLowerCase() === PRIYA.name.toLowerCase());
@@ -523,8 +529,16 @@ const copyBtn = (value, label) => `<button type="button" class="copy" data-copy=
 const idRow = (label, value) => `<div class="id-row"><dt>${label}</dt><dd>${esc(value)}</dd>${copyBtn(value, label.toLowerCase())}</div>`;
 const allIds = p => `Policy number ${p.policy}, mobile ${p.mobile}, OTP ${p.otp}`;
 
+// The person's filled proposal form, folded away behind a button on their card.
+function formDetails(p) {
+  if (!p.form?.length) return '';
+  return `<details class="form-details">
+    <summary>View filled form</summary>
+    ${p.form.map(([h, lines]) => `<h4>${esc(h)}</h4><ul>${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`).join('')}
+  </details>`;
+}
+
 function personCard(p) {
-  const i = people.indexOf(p);
   const st = STATUS[p.status];
   const sections = p.sections ? Object.entries(p.sections).map(([k, v]) => `${k}${v ? ' ' + inr(v) : ''}`).join(' · ') : '';
   return `<article class="person st-${p.status}">
@@ -540,10 +554,9 @@ function personCard(p) {
       <p class="facts"><strong>${esc(p.kind)}</strong>${p.addons?.length ? ' + ' + esc(p.addons.join(', ').replace(/_/g, ' and ')) : ''} · ${day(p.start)} to ${day(p.end)}<br>Sections ${esc(sections)}</p>`
     : p.reference ? `<dl class="ids">${idRow('Proposal', p.reference)}${idRow('Mobile', p.mobile)}</dl><p class="facts">${st.note}.</p>`
     : `<p class="facts">No policy number yet. Fill the Apply form as ${esc(p.name.split(' ')[0])}, submit it, then approve it on the HDFC ERGO Desk.</p>`}
-    <p class="story">“${esc(p.story)}”</p>
+    ${formDetails(p)}
     <div class="person-actions">
       ${p.policy ? `<button type="button" class="btn" data-copy="${esc(allIds(p))}">Copy all</button>` : ''}
-      <button type="button" class="btn primary" data-story="${i}">Ask the assistant</button>
       ${p.reference ? '<button type="button" class="btn" data-go="desk">Open the desk</button>' : ''}
       ${p.source === 'added' || p.source === 'proposal' && p.policy ? `<button type="button" class="btn remove" data-remove="${esc(p.policy)}" title="Remove ${esc(p.name)}">Remove</button>` : ''}
     </div>
@@ -592,7 +605,6 @@ async function renderQuick() {
         <span>${p.policy ? `<code>${esc(p.policy)}</code> · <code>${esc(p.mobile)}</code>` : 'Buying journey · no policy yet'}</span>
       </div>
       ${p.policy ? `<button type="button" class="copy" data-copy="${esc(allIds(p))}" title="Copy policy, mobile and OTP" aria-label="Copy ${esc(p.name)}'s details">${COPY_ICON}</button>` : ''}
-      <button type="button" class="btn" data-story="${people.indexOf(p)}">Ask</button>
     </div>`).join('');
 }
 
@@ -619,8 +631,6 @@ document.addEventListener('click', async e => {
     toast('Copied: ' + c.dataset.copy);
     return;
   }
-  const s = e.target.closest('[data-story]');
-  if (s && people[s.dataset.story]) { sendToChat(people[s.dataset.story].story); return; }
   const r = e.target.closest('[data-remove]');
   if (r) {
     if (!confirm(`Remove ${r.dataset.remove}? Its claims history stays on the desk until Reset.`)) return;
@@ -638,7 +648,7 @@ $('#remove-added').addEventListener('click', async () => {
 });
 
 $('#export-people').addEventListener('click', () => {
-  const cols = ['name', 'business', 'city', 'policy', 'mobile', 'otp', 'kind', 'start', 'end', 'status', 'source', 'reference', 'story'];
+  const cols = ['name', 'business', 'city', 'policy', 'mobile', 'otp', 'kind', 'start', 'end', 'status', 'source', 'reference'];
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const csv = [cols.join(','), ...people.map(p => cols.map(k => cell(k === 'status' ? STATUS[p.status].label : p[k])).join(','))].join('\r\n');
   const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })), download: 'vyaapar-suraksha-demo-people.csv' });
@@ -690,9 +700,21 @@ $('#person-form').addEventListener('submit', async e => {
   const sections = { I: Number(g('si_I')) || 0 };
   f.getAll('sec').forEach(k => { sections[k] = Number(g(`si_${k}`)) || 0; });
   const btn = e.submitter; btn.disabled = true;
+  const yes = k => f.has(k) ? 'Yes' : 'No';
+  const addons = f.getAll('addon').map(a => a === 'storm_flood' ? 'storm and flood' : 'earthquake');
+  const form = [
+    ['About you', [`${g('name')}${g('city') ? ', ' + g('city') : ''}`, g('mobile'), g('business') || 'Business', `Tenure ${g('tenure')} year(s), start ${g('start')}`]],
+    ['Section I', [g('kind') + (addons.length ? ` + ${addons.join(' and ')}` : g('kind') === 'Named Perils' ? ', no storm and flood or earthquake add-on' : ''), sections.I ? `Sum insured ${inr(sections.I)}` : 'Sum insured not given']],
+    ...(f.getAll('sec').includes('II') ? [['Section II Burglary and House Breaking', [
+      sections.II ? `Sum insured ${inr(sections.II)}` : 'Sum insured not given',
+      `Gold, silver, jewellery or precious stones specifically insured: ${yes('jewelleryInsured')}`,
+      `Add-ons: ${f.has('theftExtension') ? 'Theft extension' : 'None'}`]]] : []),
+    ['Optional sections', f.getAll('sec').length ? f.getAll('sec').map(k => `Section ${k}${sections[k] ? ' ' + inr(sections[k]) : ''}`) : ['None']],
+  ];
   const r = await fetch('/api/people', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
     name: g('name'), mobile: g('mobile'), business: g('business') || 'Business', city: g('city'), kind: g('kind'),
-    addons: f.getAll('addon'), sections, start: g('start'), tenure: g('tenure'), jewelleryInsured: f.has('jewelleryInsured'), story: g('story'),
+    addons: f.getAll('addon'), sections, start: g('start'), tenure: g('tenure'),
+    jewelleryInsured: f.has('jewelleryInsured'), theftExtension: f.has('theftExtension'), form,
   }) }).catch(() => null);
   btn.disabled = false;
   if (!r?.ok) { $('#person-msg').textContent = 'Could not add this person. Please check the details and try again.'; return; }
