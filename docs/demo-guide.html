@@ -181,12 +181,14 @@
   <li><b>Phone numbers:</b> the privacy filter hides 10-digit numbers, so the WhatsApp contact 8169 500 500 is masked. Allow phone numbers in the privacy settings if you can.</li>
 </ol>
 
-<h2>What was tested (11 Nov 2026)</h2>
+<h2>What was tested (12 Nov 2026)</h2>
 <ul>
   <li><b>Claims from the filled form, 13 more checks, all passing:</b> every person carries their form; wrong name refused; first name or a Hindi-script name accepted; break-in versus no break-in with and without the Theft Extension; forms and answers kept from the Add-a-person dialog and from Apply through to the issued policy.</li>
   <li><b>Back end, 70 automated checks, all passing:</b> pages and form PDF; the new chat widget; Reset; the seven tools; wrong mobile, lookup by name and wrong OTP refused; lockout after three wrong OTPs; spoken digits in English, Hindi and Devanagari; Ramesh, Sunita and Imran outcomes; the 30-day and empty-premises rules; loss above sum insured; a customer can't see another's claims; Desk status changes reach the assistant; adding active, expired and upcoming people; proposal approve and decline.</li>
   <li><b>Live chat on the real agent:</b> the full claim (verify, check, register, Desk status change, status reply); the burglary exclusions with source; a Hindi answer in Hindi script; a Hinglish answer that won't recommend.</li>
-  <li><b>Fixed during testing:</b> a policy that hasn't started yet was described as Active; wrong section numbers in one chat answer (now prevented by the prompt).</li>
+  <li><b>Duplicate claims, 2 more checks:</b> confirming the same loss twice in one chat keeps the first reference; a different loss gets a new one. 89 checks in all, passing on the live site.</li>
+  <li><b>Live audit, 11 Nov:</b> Hinglish stays in English letters through a whole claim; loss value and date reach the Desk; wrong name refused without revealing the real one; PAN offered in Hindi is not used.</li>
+  <li><b>Fixed during testing:</b> a policy that hasn't started yet was described as Active; wrong section numbers; Copy all had no name; the Source line was missing on some answers; "our" in replies; cards breaking lists (the prompt now asks for plain text).</li>
   <li><b>Still to try by you:</b> a voice call in each language on the demo laptop, after the Perfox fixes above.</li>
 </ul>
 

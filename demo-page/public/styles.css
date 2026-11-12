@@ -154,7 +154,6 @@ h2 { font-size: 18px; margin: 0 0 10px; }
 .quick-item .who strong { display: block; font-size: 14.5px; }
 .quick-item .who > span { display: block; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .quick-item .who code { font-size: 12px; padding: 0; background: none; color: var(--navy-3); }
-.classic-link { margin: 16px 0 0; text-align: center; font-size: 14px; }
 
 /* ---------- Status dots, chips, avatars ---------- */
 .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--grey); }

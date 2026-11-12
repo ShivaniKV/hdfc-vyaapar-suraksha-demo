@@ -12,8 +12,6 @@ let DATA;
 fetch('policy-data.json').then(r => r.json()).then(d => { DATA = d; renderGuide(); renderForm(); renderPersonSections(); fromHash(); });
 
 // ---------- Views ----------
-// The new Home is the start page; "classic view" starts on the Policy Guide instead (remembered in this browser).
-const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} } };
 let current, deskTimer;
 function show(view) {
   if (view === current) return;
@@ -24,7 +22,7 @@ function show(view) {
   // Load a view's data when it opens; the desk refreshes every few seconds while open, so new claims appear by themselves.
   clearInterval(deskTimer);
   const fail = el => () => { $(el).innerHTML = '<p class="empty">The claims service is not available on this server.</p>'; };
-  if (view === 'home') { store.set('vs_classic', null); renderQuick().catch(fail('#quick-people')); }
+  if (view === 'home') { renderQuick().catch(fail('#quick-people')); }
   if (view === 'people') renderPeople().catch(fail('#people-groups'));
   if (view === 'desk') {
     renderDesk().catch(fail('#desk-claims'));
@@ -38,7 +36,6 @@ document.addEventListener('click', e => {
   e.preventDefault();
   show(go.dataset.go);
 });
-$('#classic-on').addEventListener('click', () => { store.set('vs_classic', '1'); show('guide'); });
 
 // ---------- Policy Guide ----------
 function renderGuide() {
@@ -793,4 +790,4 @@ document.getElementById('reset').addEventListener('click', async () => {
   location.replace(location.pathname);
 });
 
-show(store.get('vs_classic') ? 'guide' : 'home');
+show('home');
