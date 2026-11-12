@@ -3,43 +3,35 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Vyaapar Suraksha Demo Guide</title>
+<title>Vyaapar Suraksha Demo Sheet</title>
 <style>
-  @page { size: A4; margin: 14mm; }
-  :root { --ink:#16203a; --muted:#5b6475; --line:#dde1e8; --navy:#0f1f45; --red:#c8102e; --soft:#f4f6fa; --green:#1a7f37; --gbg:#e6f4ea; --rbg:#fdecef; --amber:#8a5a00; --abg:#fff4dc; }
+  @page { size: A4; margin: 12mm; }
+  :root { --ink:#16203a; --muted:#5b6475; --line:#dde1e8; --navy:#0f1f45; --red:#c8102e; --soft:#f4f6fa; --green:#1a7f37; --gbg:#e6f4ea; --amber:#8a5a00; --abg:#fff4dc; }
   * { box-sizing: border-box; }
-  body { font: 15px/1.55 "Segoe UI", "Nirmala UI", Inter, Arial, sans-serif; color: var(--ink); background: #fff; margin: 0; }
-  .wrap { max-width: 920px; margin: 0 auto; padding: 28px 18px 60px; }
-  header { background: var(--navy); color: #fff; border-radius: 14px; padding: 26px 26px 22px; margin-bottom: 26px; }
-  header h1 { margin: 0 0 6px; font-size: 27px; }
+  body { font: 15px/1.5 "Segoe UI", "Nirmala UI", Arial, sans-serif; color: var(--ink); background: #fff; margin: 0; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { background: var(--navy); color: #fff; border-radius: 12px; padding: 20px 22px; margin-bottom: 18px; }
+  header h1 { margin: 0 0 4px; font-size: 24px; }
   header p { margin: 0; color: #c9d3ea; }
-  header .meta { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
-  header .meta span { background: rgba(255,255,255,.1); border-radius: 20px; padding: 3px 12px; font-size: 13px; }
-  h2 { font-size: 20px; margin: 34px 0 10px; padding-bottom: 6px; border-bottom: 3px solid var(--red); break-after: avoid; }
-  h3 { font-size: 16px; margin: 20px 0 6px; break-after: avoid; }
-  p { margin: 0 0 10px; }
-  ol, ul { margin: 0 0 10px; padding-left: 22px; }
-  li { margin-bottom: 5px; }
-  table { width: 100%; border-collapse: collapse; margin: 6px 0 14px; font-size: 14px; }
-  th, td { border: 1px solid var(--line); padding: 7px 9px; text-align: left; vertical-align: top; }
+  h2 { font-size: 18px; margin: 26px 0 8px; padding-bottom: 4px; border-bottom: 3px solid var(--red); break-after: avoid; }
+  p { margin: 0 0 8px; }
+  ul, ol { margin: 0 0 8px; padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; margin: 4px 0 10px; font-size: 14px; }
+  th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
   th { background: var(--soft); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
   tr { break-inside: avoid; }
-  code, .t { font-family: Consolas, "JetBrains Mono", monospace; font-size: 13.5px; background: var(--soft); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; }
-  .t { display: block; margin: 4px 0; padding: 6px 10px; white-space: pre-wrap; }
-  .act { border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px 8px; margin: 14px 0; break-inside: avoid; }
-  .act h3 { margin-top: 0; display: flex; gap: 10px; align-items: baseline; }
-  .act h3 .n { background: var(--red); color: #fff; border-radius: 6px; padding: 0 8px; font-size: 13px; }
-  .act h3 .time { margin-left: auto; font-weight: 400; color: var(--muted); font-size: 13px; }
-  .say { border-left: 4px solid var(--navy); background: var(--soft); padding: 8px 12px; margin: 8px 0 10px; font-style: italic; }
-  .wow { border-left: 4px solid var(--green); background: var(--gbg); padding: 8px 12px; margin: 8px 0 10px; }
-  .warn { border-left: 4px solid var(--amber); background: var(--abg); padding: 8px 12px; margin: 8px 0 10px; }
-  .tag { display: inline-block; border-radius: 12px; padding: 0 9px; font-size: 12px; font-weight: 600; }
-  .g { background: var(--gbg); color: var(--green); } .r { background: var(--rbg); color: var(--red); }
+  code, .t { font-family: Consolas, monospace; font-size: 13.5px; background: var(--soft); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; }
+  code { white-space: nowrap; }
+  .t { display: block; margin: 4px 0 6px; padding: 6px 10px; white-space: pre-wrap; }
   .muted { color: var(--muted); }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
-  .card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
-  .card b { display: block; }
-  .pb { break-before: page; }
+  .step { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px 6px; margin: 10px 0; break-inside: avoid; }
+  .step h3 { margin: 0 0 6px; font-size: 16px; display: flex; gap: 8px; align-items: baseline; }
+  .step h3 .n { background: var(--red); color: #fff; border-radius: 6px; padding: 0 8px; font-size: 13px; }
+  .step h3 .time { margin-left: auto; font-weight: 400; color: var(--muted); font-size: 13px; }
+  .point { border-left: 4px solid var(--green); background: var(--gbg); padding: 6px 10px; margin: 6px 0 8px; }
+  .note { border-left: 4px solid var(--amber); background: var(--abg); padding: 6px 10px; margin: 6px 0 8px; }
+  .check li { list-style: "☐  "; }
   @media print { .wrap { padding: 0; } header { -webkit-print-color-adjust: exact; print-color-adjust: exact; } body { font-size: 13px; } }
 </style>
 </head>
@@ -47,150 +39,108 @@
 <div class="wrap">
 
 <header>
-  <h1>Vyaapar Suraksha Assistant: Demo Guide</h1>
-  <p>How to run a 20-minute demo for HDFC ERGO that shows the assistant answering policy questions, taking a proposal and handling a claim, in chat and voice, in three languages.</p>
-  <div class="meta">
-    <span>Site: hdfc-vs-demo.skillmine-hr-api.workers.dev</span>
-    <span>Agent: Perfox Studio, hdfc-ergo-demo</span>
-    <span>All customer data is made up</span>
-  </div>
+  <h1>Vyaapar Suraksha Assistant: Demo Sheet</h1>
+  <p>About 20 minutes. Site: hdfc-vs-demo.skillmine-hr-api.workers.dev · All customers and data are made up.</p>
 </header>
 
-<h2>The story in one line</h2>
-<p><b>"A shopkeeper's shop is broken into at 11 at night. Today they wait for office hours. With this assistant, they get a clear, honest answer in their own language within two minutes, the claim is registered, and HDFC ERGO's team sees it on their desk instantly."</b></p>
-<p>Everything in the demo supports that story: the assistant explains and never sells, it never asks for PAN, KYC or bank details, and whether a loss is likely covered is decided by fixed rules taken from the policy wording, not by the AI's guess. The AI explains the result.</p>
+<h2>Before you start (10 minutes)</h2>
+<ul class="check">
+  <li>Open the site in Chrome at 100% zoom. Click <b>Reset demo</b> (top right). The Desk should show 0 claims.</li>
+  <li>Open a second tab on the same site, on the <b>HDFC ERGO Desk</b> tab.</li>
+  <li>Send one warm-up question in the chat (<i>What is Section I?</i>), then click <b>New chat</b> (top of the chat).</li>
+  <li>For voice: earphones with a mic, Chrome mic allowed, room quiet.</li>
+  <li>In Perfox (once): agent Published, Rich replies = <b>Text only</b>, reply length raised, credits available.</li>
+</ul>
 
-<h2>30 minutes before</h2>
-<ol>
-  <li><b>Perfox Studio:</b> the agent is <b>Published</b>, the Vyaapar Suraksha MCP integration is attached to the AI Agent node, and the workspace has credits.</li>
-  <li><b>Open the site</b> in Chrome at 100% zoom on a wide screen. Click <b>Reset</b> (top right). This clears claims, call-backs and proposals; people you added stay.</li>
-  <li><b>Open a second tab</b> on the <b>HDFC ERGO Desk</b> tab of the same site. If you have two screens, put the Desk on the screen the audience sees.</li>
-  <li><b>Voice:</b> plug in earphones with a microphone, allow the microphone in Chrome, and set Windows microphone level to 100% with Audio enhancements off.</li>
-  <li><b>Warm-up:</b> send one question in the chat (for example <code>What is Section I?</code>) so the first reply in front of the audience is fast. Then click <b>New chat</b> in the chat header.</li>
-  <li>Keep this guide open on your phone or a printout.</li>
-</ol>
-
-<h3>Demo logins (also on the People page as copy cards)</h3>
+<h2>Logins</h2>
 <table>
-  <tr><th>Person</th><th>Policy number</th><th>Mobile</th><th>What their filled form says</th></tr>
-  <tr><td>Ramesh Jain, jewellery shop, Jaipur</td><td><code>VS-2026-10001</code></td><td><code>9829000001</code></td><td>All Risk; Section II with jewellery specifically insured and the Theft Extension; Section XI Money</td></tr>
-  <tr><td>Sunita Sharma, kirana store, Patna</td><td><code>VS-2026-10002</code></td><td><code>9835000002</code></td><td>Named Perils with no storm and flood add-on; Section II without jewellery or Theft Extension</td></tr>
-  <tr><td>Imran Khan, electronics, Pune</td><td><code>VS-2025-10003</code></td><td><code>9822000003</code></td><td>Named Perils; the policy ended on 30 Sep 2026 and was not renewed</td></tr>
+  <tr><th>Person</th><th>Policy</th><th>Mobile</th><th>What they bought</th></tr>
+  <tr><td><b>Ramesh Jain</b><br>Jewellery shop, Jaipur</td><td><code>VS-2026-10001</code></td><td><code>9829000001</code></td><td>All Risk; jewellery insured; Theft Extension</td></tr>
+  <tr><td><b>Sunita Sharma</b><br>Kirana store, Patna</td><td><code>VS-2026-10002</code></td><td><code>9835000002</code></td><td>Named Perils; no flood add-on; jewellery not insured</td></tr>
+  <tr><td><b>Imran Khan</b><br>Electronics, Pune</td><td><code>VS-2025-10003</code></td><td><code>9822000003</code></td><td>Policy ended 30 Sep 2026</td></tr>
 </table>
-<p>The OTP for everyone is <code>123456</code>. Each card on the People page has <b>View filled form</b>, which opens the proposal form that person filled in. The assistant judges every claim from that form, so nobody needs a script: let the customer describe what happened in their own words.</p>
-<table>
-  <tr><th>If the customer says…</th><th>Ramesh</th><th>Sunita</th><th>Imran</th></tr>
-  <tr><td>Thieves broke in and took jewellery</td><td><span class="tag g">likely covered</span></td><td><span class="tag r">not covered</span>: jewellery not specifically insured</td><td rowspan="4"><span class="tag r">not covered</span>: the policy had ended</td></tr>
-  <tr><td>Thieves broke in and took stock</td><td><span class="tag g">likely covered</span></td><td><span class="tag g">likely covered</span></td></tr>
-  <tr><td>Something was taken from the counter, with no break-in</td><td><span class="tag g">likely covered</span>: has the Theft Extension</td><td><span class="tag r">not covered</span>: no Theft Extension</td></tr>
-  <tr><td>Rain or flood damaged the stock</td><td><span class="tag g">likely covered</span>: All Risk</td><td><span class="tag r">not covered</span>: no flood add-on</td></tr>
-</table>
+<p>OTP for everyone: <code>123456</code>. The name is required; first name is enough. <b>Copy all</b> on the People page copies name, policy and mobile.</p>
 
-<h2 class="pb">The demo, act by act</h2>
-<p class="muted">Type each message once and wait for the reply (3 to 15 seconds). If a reply looks cut off, click <b>New chat</b> and ask again.</p>
+<h2>The demo, step by step</h2>
+<p class="muted">Type in your own words; the lines below are examples. Wait for each reply (3 to 15 seconds).</p>
 
-<div class="act">
-  <h3><span class="n">1</span> Open with the problem <span class="time">1 min</span></h3>
-  <p>Start on the <b>Home</b> tab.</p>
-  <div class="say">"Vyaapar Suraksha has 21 sections, a 100-page wording and two kinds of property cover. A shopkeeper can't read that, and an agent can't be awake at 11 at night. This assistant explains the policy, helps them apply and handles their claim, in chat or by voice, in English, Hinglish and Hindi."</div>
+<div class="step">
+  <h3><span class="n">1</span> The problem <span class="time">1 min</span></h3>
+  <p>On Home, say: <i>"21 sections, a 100-page wording. A shopkeeper can't read that, and no agent is awake at 11 pm. This assistant explains, helps them apply and handles the claim, in chat or voice, in English, Hinglish and Hindi."</i></p>
 </div>
 
-<div class="act">
-  <h3><span class="n">2</span> It knows the policy, and shows where it read it <span class="time">3 min</span></h3>
-  <p>Type:</p>
+<div class="step">
+  <h3><span class="n">2</span> It knows the policy <span class="time">3 min</span></h3>
   <span class="t">What is not covered under burglary? I run a mobile phone shop.</span>
-  <p>Point at the <b>Source</b> line (Policy Wordings, Section II, page 26). Then open the <b>Policy Guide</b> tab, find Section II and click <b>Read in the policy</b>: HDFC ERGO's own PDF opens at that place, highlighted.</p>
-  <div class="wow">Every answer is traceable to a page in HDFC ERGO's own documents. Compliance teams care about this most.</div>
+  <p>Point at the <b>Source</b> line at the end. Open <b>Policy Guide</b> → Section II → <b>Read in the policy</b>: HDFC ERGO's own PDF opens at that place.</p>
+  <div class="point">Every answer traces back to a page in HDFC ERGO's own documents.</div>
 </div>
 
-<div class="act">
-  <h3><span class="n">3</span> It speaks the customer's language, and doesn't sell <span class="time">2 min</span></h3>
+<div class="step">
+  <h3><span class="n">3</span> Their language, and no selling <span class="time">2 min</span></h3>
   <span class="t">मेरी किराने की दुकान है। बाढ़ से स्टॉक खराब हो जाए तो क्या कवर मिलेगा?</span>
-  <p>It answers in Hindi script and explains that flood needs an add-on under Named Perils. Then:</p>
+  <p>It answers in Hindi. Then in Hinglish:</p>
   <span class="t">Mujhe kaunsa section lena chahiye? Aap hi bata do best kya hai</span>
-  <div class="say">"It explains the options in Hinglish but won't choose for the customer. That decision stays with the customer or an HDFC ERGO representative, which keeps it clear of mis-selling."</div>
+  <div class="point">It explains the options but won't choose for the customer. No mis-selling.</div>
 </div>
 
-<div class="act">
-  <h3><span class="n">4</span> From question to proposal <span class="time">3 min</span></h3>
-  <span class="t">I want to buy this for my shop. Should I send you my PAN and Aadhaar here?</span>
-  <p>It says not to share them in chat and points to the <b>Apply</b> tab. Open Apply, choose Named Perils, tick Section II and Section XI, fill in a name and mobile, and <b>download the filled HDFC ERGO proposal form</b>. Click <b>Send to the assistant</b> to have it confirm the choices, then <b>Submit to HDFC ERGO (demo)</b>.</p>
-  <p>Switch to the <b>HDFC ERGO Desk</b>: the proposal is waiting. Click <b>Approve and issue policy</b>; a policy number is issued and the person appears on the <b>People</b> page with a copy card.</p>
-  <div class="wow">One flow covers the whole journey: question, filled form, HDFC ERGO decision and a live policy.</div>
+<div class="step">
+  <h3><span class="n">4</span> From question to policy <span class="time">3 min</span></h3>
+  <span class="t">I want to buy this. Should I send my PAN and Aadhaar here?</span>
+  <p>It says not to share them here. Open <b>Apply</b>: choose Named Perils, tick Section II, fill name and mobile, <b>Review my proposal</b> → <b>Submit to HDFC ERGO (demo)</b>. On the <b>Desk</b>, click <b>Approve and issue policy</b>. The new person appears on <b>People</b> with a policy number.</p>
 </div>
 
-<div class="act">
-  <h3><span class="n">5</span> The claim at 11 pm (the main moment) <span class="time">5 min</span></h3>
-  <p>On People, open Ramesh's <b>View filled form</b> so the audience sees what he declared. Click <b>New chat</b> and play Ramesh in your own words, for example <i>"My jewellery shop was robbed last night."</i></p>
-  <p>It checks everyone is safe, then asks for his name, policy number and registered mobile, and sends an OTP. Give <b>Ramesh Jain</b>, <code>VS-2026-10001</code>, <code>9829000001</code>, then <code>123456</code>. A wrong name is refused, which is worth showing once.</p>
-  <p>Answer its questions naturally: what was taken, roughly its value, whether they broke in. It checks the policy was active on that date, reads his form (jewellery specifically insured) and says <b>likely covered</b>, that HDFC ERGO's surveyor decides, what to do now (FIR, don't clear the scene, keep bills), and asks to register.</p>
-  <span class="t">Yes, register it</span>
-  <p>It gives a reference like <code>CLM-2026-0412</code>. Switch to the <b>Desk</b>: the claim is there with the reasons and the customer's own words. Change its status to <b>Surveyor assigned</b>. Back in the chat:</p>
-  <span class="t">What is the status of my claim?</span>
-  <div class="wow">The assistant reports "Surveyor assigned" and the next step. The customer and HDFC ERGO see the same data, live.</div>
+<div class="step">
+  <h3><span class="n">5</span> The claim at 11 pm (main moment) <span class="time">5 min</span></h3>
+  <p>On People, open Ramesh's <b>View filled form</b>. Click <b>New chat</b>, then as Ramesh:</p>
+  <span class="t">My jewellery shop was broken into last night. Gold worth about 3 lakh was stolen.</span>
+  <p>It checks everyone is safe and asks for name, policy and mobile. Give <b>Ramesh Jain, VS-2026-10001, 9829000001</b>, then OTP <b>123456</b>.</p>
+  <p>It says <b>likely covered</b> (his form has jewellery insured), that the surveyor decides, what to do now and which documents. Say <i>Yes, register it</i> → it gives a reference like <b>CLM-2026-0412</b>.</p>
+  <p>On the <b>Desk</b>: the claim is there with the value and his words. Change status to <b>Surveyor assigned</b>. Back in the chat: <i>What is the status of my claim?</i></p>
+  <div class="point">Customer and HDFC ERGO see the same data, live.</div>
 </div>
 
-<div class="act">
-  <h3><span class="n">6</span> It's honest when the answer is no <span class="time">2 min</span></h3>
-  <p>New chat, as Sunita (<b>Sunita Sharma</b>, <code>VS-2026-10002</code>, <code>9835000002</code>, OTP <code>123456</code>). Tell the <b>same story</b> Ramesh told: jewellery stolen in a break-in. This time it is likely <b>not</b> covered, because her form says jewellery is not specifically insured. Then try rain damaging her stock: not covered either, because she has no storm and flood add-on.</p>
-  <div class="wow">Same words, different answer, because each answer comes from what that customer actually bought. It still offers to register the claim.</div>
-  <div class="say">"It never says approved or rejected and never promises an amount. It tells the customer the likely position and why, and reporting the loss is always their right."</div>
+<div class="step">
+  <h3><span class="n">6</span> Honest when the answer is no <span class="time">2 min</span></h3>
+  <p><b>New chat</b>, as Sunita (Sunita Sharma, VS-2026-10002, 9835000002, OTP 123456). Tell the same story: jewellery stolen in a break-in.</p>
+  <p>This time: <b>likely not covered</b>, because her form says jewellery is not insured. It still offers to register the claim.</p>
+  <div class="point">Same words, different answer: it reads what each customer actually bought. It never says approved or rejected, and never promises an amount.</div>
 </div>
 
-<div class="act">
+<div class="step">
   <h3><span class="n">7</span> Talk to it <span class="time">3 min</span></h3>
-  <p>Click the <b>headset</b> button in the chat (Start a live voice conversation). Speak in Hinglish, for example: <i>"Namaste, mere dukaan mein kal raat chori ho gayi."</i> Give the name, then the policy number and mobile digit by digit; "double zero" works. Say the OTP as "one two three four five six" or "ek do teen char paanch chhe".</p>
-  <div class="warn">Use earphones, speak a beat after it finishes and keep the room quiet. If it hears nothing, stop the call, check the mic, start again.</div>
+  <p>Click the <b>headset</b> button in the chat. Say in Hinglish: <i>"Namaste, meri dukaan mein kal raat chori ho gayi."</i> Give name, then policy and mobile digit by digit ("double zero" works). OTP: "one two three four five six" or "ek do teen char paanch chhe".</p>
+  <div class="note">Speak a beat after it finishes. If it hears nothing, stop the call, check the mic, start again. Or switch back to chat.</div>
 </div>
 
-<div class="act">
-  <h3><span class="n">8</span> Let them try it <span class="time">2 min, optional</span></h3>
-  <p>On <b>People</b>, click <b>+ Add a person</b> and let someone in the room choose: a name, any 10-digit mobile, a status (Active, Expiring, Expired, Upcoming), Section II, and whether jewellery and the Theft Extension are included. Hand them the laptop: they copy the policy number from the new card and report any loss they like. The answer follows what they just ticked.</p>
-  <div class="wow">Nothing is scripted when the audience makes up the customer. This convinces people more than anything else.</div>
+<div class="step">
+  <h3><span class="n">8</span> Let them try (optional) <span class="time">2 min</span></h3>
+  <p>On People, <b>+ Add a person</b>: let someone in the room pick a name, any mobile, status, and whether jewellery and Theft Extension are included. They report any loss they like; the answer follows what they ticked.</p>
 </div>
 
-<h2 class="pb">If something goes wrong</h2>
+<h2>If something goes wrong</h2>
 <table>
-  <tr><th>What you see</th><th>Do this</th></tr>
-  <tr><td>A reply stops mid-sentence, or the next reply continues the old one</td><td>Click <b>New chat</b> and ask again, shorter. Fix for good: raise the AI Agent node's maximum reply length in Perfox (see below).</td></tr>
-  <tr><td>It asks for the OTP again</td><td>Give <code>123456</code> again. This happens when the chat was reset or a new chat was opened.</td></tr>
-  <tr><td>"No policy matches"</td><td>Copy the number from the People page; check the mobile matches that card.</td></tr>
-  <tr><td>"The name does not match"</td><td>Give the name on that person's card. First name alone is enough. It never says the right name, by design.</td></tr>
-  <tr><td>Old buttons from an earlier chat (Confirm &amp; Register, choices)</td><td>Ignore them and click <b>New chat</b>. Clicking an old Confirm can register the claim a second time.</td></tr>
-  <tr><td>Chat shows an error or doesn't answer</td><td>Reload the page. In Perfox, check the agent is Published and has credits.</td></tr>
-  <tr><td>Voice doesn't hear you</td><td>Earphones, Chrome mic permission, Windows mic at 100%. Or switch to chat; the story is the same.</td></tr>
-  <tr><td>The Desk looks cluttered from practice</td><td>Click <b>Reset</b>. Added people stay; remove them on the People page if needed.</td></tr>
+  <tr><th>You see</th><th>Do this</th></tr>
+  <tr><td>Reply stops mid-sentence or makes no sense</td><td>Click <b>New chat</b> and ask again, shorter.</td></tr>
+  <tr><td>"No policy matches"</td><td>Use <b>Copy all</b> on the People card and paste it.</td></tr>
+  <tr><td>"The name does not match"</td><td>Give the name on the card. It never reveals the right name, by design.</td></tr>
+  <tr><td>It asks for the OTP again</td><td>Type <code>123456</code> again.</td></tr>
+  <tr><td>Chat doesn't answer</td><td>Reload the page. In Perfox, check the agent is Published and has credits.</td></tr>
+  <tr><td>Desk cluttered from practice</td><td>Click <b>Reset demo</b>. Added people stay.</td></tr>
 </table>
 
-<h2>Questions HDFC ERGO may ask</h2>
+<h2>If they ask</h2>
 <table>
   <tr><th>Question</th><th>Answer</th></tr>
-  <tr><td>Can it make things up?</td><td>Policy answers come only from HDFC ERGO's four documents, with page references. Whether a claim is likely covered is decided by fixed rules in code (policy period, add-ons, sections taken, exclusions, the 30-day reporting rule, the empty-premises rule), not by the AI. The AI only explains the result.</td></tr>
-  <tr><td>Does it handle personal data?</td><td>It never asks for PAN, Aadhaar, KYC or bank details and tells customers to give them directly to HDFC ERGO. Policy details are shown only after OTP verification.</td></tr>
-  <tr><td>How does it connect to our systems?</td><td>Through seven tools: verify, OTP, get policy, check claim, register claim, claim status and call-back. In production these call HDFC ERGO's policy admin and claims systems instead of the demo store; the assistant doesn't change.</td></tr>
-  <tr><td>Can it approve or reject a claim?</td><td>No. It says "likely covered" or "likely not covered" and that HDFC ERGO's surveyor decides. It never promises an amount.</td></tr>
-  <tr><td>Which languages?</td><td>English, Hinglish and Hindi in chat and voice today. More Indian languages can be added.</td></tr>
-  <tr><td>Can it do outbound calls, like renewal reminders?</td><td>Yes; that's the natural next step. See "What to add next".</td></tr>
+  <tr><td>Can it make things up?</td><td>Policy answers come only from HDFC ERGO's four documents, with page references. Whether a claim is likely covered is decided by fixed rules from the policy wording, not by the AI. The AI explains the result.</td></tr>
+  <tr><td>Personal data?</td><td>It never asks for PAN, Aadhaar, KYC or bank details. Policy details are shown only after OTP.</td></tr>
+  <tr><td>Can it approve a claim?</td><td>No. It says "likely covered" or "likely not covered"; HDFC ERGO's surveyor decides.</td></tr>
+  <tr><td>How does it connect to our systems?</td><td>Through seven tools (verify, OTP, policy, check claim, register, status, call-back). In production they call HDFC ERGO's policy and claims systems; the assistant stays the same.</td></tr>
+  <tr><td>Languages?</td><td>English, Hinglish and Hindi in chat and voice; more Indian languages can be added.</td></tr>
 </table>
 
-<h2>Fix in Perfox before the demo</h2>
-<ol>
-  <li><b>Reply length:</b> open the agent, click the <b>AI Agent</b> node, and raise the maximum output or max tokens setting (to about 1,500). Short limits cut answers off mid-sentence.</li>
-  <li><b>Paste the updated prompts:</b> both now include the 21 numbered sections, so the assistant can't mix up section numbers. Chat: <code>Bot Instructions.md</code>. Voice: <code>Bot Instructions - Voice.md</code>. Publish after pasting.</li>
-  <li><b>Name in the chat header:</b> Appearance, set the display name to <b>Suraksha Sahayak</b> (it shows "Perfox" now).</li>
-  <li><b>Phone numbers:</b> the privacy filter hides 10-digit numbers, so the WhatsApp contact 8169 500 500 is masked. Allow phone numbers in the privacy settings if you can.</li>
-</ol>
-
-<h2>What was tested (12 Nov 2026)</h2>
-<ul>
-  <li><b>Claims from the filled form, 13 more checks, all passing:</b> every person carries their form; wrong name refused; first name or a Hindi-script name accepted; break-in versus no break-in with and without the Theft Extension; forms and answers kept from the Add-a-person dialog and from Apply through to the issued policy.</li>
-  <li><b>Back end, 70 automated checks, all passing:</b> pages and form PDF; the new chat widget; Reset; the seven tools; wrong mobile, lookup by name and wrong OTP refused; lockout after three wrong OTPs; spoken digits in English, Hindi and Devanagari; Ramesh, Sunita and Imran outcomes; the 30-day and empty-premises rules; loss above sum insured; a customer can't see another's claims; Desk status changes reach the assistant; adding active, expired and upcoming people; proposal approve and decline.</li>
-  <li><b>Live chat on the real agent:</b> the full claim (verify, check, register, Desk status change, status reply); the burglary exclusions with source; a Hindi answer in Hindi script; a Hinglish answer that won't recommend.</li>
-  <li><b>Duplicate claims, 2 more checks:</b> confirming the same loss twice in one chat keeps the first reference; a different loss gets a new one. 89 checks in all, passing on the live site.</li>
-  <li><b>Live audit, 11 Nov:</b> Hinglish stays in English letters through a whole claim; loss value and date reach the Desk; wrong name refused without revealing the real one; PAN offered in Hindi is not used.</li>
-  <li><b>Fixed during testing:</b> a policy that hasn't started yet was described as Active; wrong section numbers; Copy all had no name; the Source line was missing on some answers; "our" in replies; cards breaking lists (the prompt now asks for plain text).</li>
-  <li><b>Still to try by you:</b> a voice call in each language on the demo laptop, after the Perfox fixes above.</li>
-</ul>
+<h2>Last checked: 12 Nov 2026</h2>
+<p>89 automated checks pass on the live site. Tested live: Sunita's claim end to end (likely covered, ₹80,000 on the Desk, no cards), wrong name refused, Hinglish and Hindi replies in the right script, PAN not repeated, Apply → Desk approval → new policy on People. Not tested by me: voice (needs a mic).</p>
 
 </div>
 </body>
