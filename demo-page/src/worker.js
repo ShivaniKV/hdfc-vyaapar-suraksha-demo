@@ -391,16 +391,19 @@ export class ClaimsStore extends DurableObject {
       await this.save(s);
       return json(s.proposals[0]);
     }
-    const pr = url.pathname.match(/^\/api\/proposals\/([\w-]+)(?:\/(approve|decline))?$/);
+    // A proposal goes: Proposal received → (approve) Awaiting premium → (premium) Policy issued. Decline is possible until the policy is issued.
+    const pr = url.pathname.match(/^\/api\/proposals\/([\w-]+)(?:\/(approve|decline|premium))?$/);
     if (pr) {
       const s = await this.state();
       const p = s.proposals.find(x => x.reference === pr[1]);
       if (!p) return json({ error: 'No such proposal' }, 404);
       if (request.method === 'GET') return json(p);
-      if (request.method !== 'POST' || !pr[2] || p.status !== 'Proposal received') return json({ error: 'Only a new proposal can be approved or declined' }, 400);
+      const allowed = { approve: ['Proposal received'], decline: ['Proposal received', 'Awaiting premium'], premium: ['Awaiting premium'] }[pr[2]];
+      if (request.method !== 'POST' || !allowed?.includes(p.status)) return json({ error: `This proposal is "${p.status}"; that step is not possible now` }, 400);
       if (pr[2] === 'decline') p.status = 'Not accepted';
+      else if (pr[2] === 'approve') { p.status = 'Awaiting premium'; p.approved_at = new Date().toISOString(); }
       else {
-        // Approving plays HDFC ERGO accepting the proposal and receiving the premium: a policy is issued from it.
+        // The policy exists only once the premium is in; a future start date makes it "not started" until then.
         const start = p.start && p.start > today() ? p.start : today();
         p.policy = this.addPerson(s, { ...p, start }, 'proposal').policy;
         p.status = 'Policy issued';
@@ -461,6 +464,11 @@ export class ClaimsStore extends DurableObject {
       const otp = digits.length === 16 && digits.slice(0, 10) === c?.mobile ? digits.slice(10) : digitsOf(a.otp);
       if (c && session.pending === c.policy && otp) return this.call('verify_otp', { otp }, conv);
       const mobile = otp && digits.length === 16 ? digits.slice(0, 10) : digits.slice(-10);
+      // Someone who applied but has no policy yet: say where it stands instead of "no match".
+      const waiting = (!c || c.mobile !== mobile) && s.proposals.find(p => p.mobile === mobile && ['Proposal received', 'Awaiting premium'].includes(p.status) && String(a.name || '').trim() && nameMatches(a.name, p.name));
+      if (waiting) return { ok: false, no_policy_yet: true, say: waiting.status === 'Awaiting premium'
+        ? `This mobile has proposal ${waiting.reference}, approved by HDFC ERGO but the premium has not been received yet. There is no policy number and no cover until the premium is paid; nothing that happens before that is covered. Tell the customer this and that the status shows in the Apply tab.`
+        : `This mobile has proposal ${waiting.reference}, still waiting for HDFC ERGO's decision. There is no policy number and no cover yet. Tell the customer this and that the status shows in the Apply tab.` };
       if (!c || c.mobile !== mobile) return { ok: false, say: 'No policy matches that policy number and mobile number. Ask the customer to check both, or contact HDFC ERGO on 022 6158 2020 / 022 6234 6234.' };
       if (!String(a.name || '').trim()) return { ok: false, say: 'Ask for the policyholder\'s name, then call start_verification again with the name, policy number and mobile.' };
       if (!nameMatches(a.name, c.name)) return { ok: false, say: 'The name does not match the name on this policy. Ask the customer to give the policyholder\'s name as on the policy. Do not reveal the name on the policy.' };

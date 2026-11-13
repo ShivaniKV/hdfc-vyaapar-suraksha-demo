@@ -330,14 +330,23 @@ async function submitProposal(btn) {
   showProposal(await r.json());
 }
 
+// The three steps a proposal goes through, with the ones done ticked.
+const STEPS = ['Proposal received', 'Approved by HDFC ERGO', 'Premium received, policy issued'];
+function proposalSteps(status) {
+  const done = { 'Proposal received': 1, 'Awaiting premium': 2, 'Policy issued': 3 }[status] || 0;
+  return `<ol class="steps">${STEPS.map((s, i) => `<li class="${i < done ? 'done' : i === done ? 'now' : ''}">${s}</li>`).join('')}</ol>`;
+}
+
 function showProposal(p) {
   const box = $('#proposal-status');
   box.hidden = false;
   clearTimeout(proposalTimer);
+  const desk = '<div class="actions"><button type="button" class="primary" data-go="desk">Open the HDFC ERGO Desk</button></div>';
   if (p.status === 'Policy issued') {
     const ask = `I have a Vyaapar Suraksha policy. Policy number ${p.policy}, mobile ${p.mobile}. What does it cover?`;
-    box.innerHTML = `<h3>Policy issued: ${esc(p.policy)}</h3>
-      <p>HDFC ERGO accepted proposal ${esc(p.reference)}. You are now a policyholder: registered mobile ${esc(p.mobile)}, demo OTP 123456.</p>
+    const later = p.start > new Date().toISOString().slice(0, 10);
+    box.innerHTML = `${proposalSteps(p.status)}<h3>Policy issued: ${esc(p.policy)}</h3>
+      <p>HDFC ERGO accepted proposal ${esc(p.reference)} and received the premium. You are now a policyholder: registered mobile ${esc(p.mobile)}, demo OTP 123456.${later ? ` Cover starts on ${esc(day(p.start))}; anything that happens before then is not covered.` : ''}</p>
       <div class="actions"><button type="button" class="primary" data-ask="${esc(ask)}">Ask the assistant about my policy</button><button type="button" data-go="people">See it on People</button></div>`;
     box.className = 'card status-ok';
     return;
@@ -345,10 +354,11 @@ function showProposal(p) {
   box.className = p.status === 'Not accepted' ? 'card status-no' : 'card status-wait';
   box.innerHTML = p.status === 'Not accepted'
     ? `<h3>Proposal ${esc(p.reference)}: not accepted</h3><p>HDFC ERGO did not accept this proposal. Please contact HDFC ERGO on 022 6158 2020. You can change your answers with <strong>Edit</strong> and submit again.</p>`
-    : `<h3>Proposal ${esc(p.reference)} received ⏳</h3><p class="muted">Waiting for HDFC ERGO to approve or decline it. In the demo, do that on the HDFC ERGO Desk; this box updates by itself.</p>
-      <div class="actions"><button type="button" class="primary" data-go="desk">Open the HDFC ERGO Desk</button></div>`;
+    : p.status === 'Awaiting premium'
+    ? `${proposalSteps(p.status)}<h3>Proposal ${esc(p.reference)} approved: pay the premium 💳</h3><p class="muted">HDFC ERGO has approved it. The policy is issued and cover starts only once the premium is received; until then nothing is covered. In the demo, mark the premium received on the HDFC ERGO Desk.</p>${desk}`
+    : `${proposalSteps(p.status)}<h3>Proposal ${esc(p.reference)} received ⏳</h3><p class="muted">Waiting for HDFC ERGO to approve or decline it. In the demo, do that on the HDFC ERGO Desk; this box updates by itself.</p>${desk}`;
   if (p.status === 'Not accepted') { $('#edit-wrap').hidden = false; const b = $('#submit-proposal'); b.disabled = false; b.textContent = 'Submit again'; }
-  if (p.status === 'Proposal received') {
+  if (p.status === 'Proposal received' || p.status === 'Awaiting premium') {
     proposalTimer = setTimeout(() => fetch(`/api/proposals/${p.reference}`).then(r => r.json()).then(showProposal).catch(() => {}), 4000);
   }
 }
@@ -506,9 +516,10 @@ const STATUS = {
   upcoming: { label: 'Not started', note: 'Start date is in the future' },
   expired: { label: 'Expired', note: 'Claims after the end date are not covered' },
   pending: { label: 'Proposal pending', note: 'Waiting for approval on the HDFC ERGO Desk' },
+  awaiting: { label: 'Awaiting premium', note: 'Approved; the policy is issued and cover starts only once the premium is received' },
   prospect: { label: 'No policy yet', note: 'Try the buying journey' },
 };
-const ORDER = ['active', 'expiring', 'upcoming', 'expired', 'pending', 'prospect'];
+const ORDER = ['active', 'expiring', 'upcoming', 'expired', 'pending', 'awaiting', 'prospect'];
 const ORIGIN = { demo: 'Demo', added: 'Added', proposal: 'From proposal' };
 const PRIYA = { name: 'Priya Nair', business: 'New bakery', city: 'Kochi', status: 'prospect', source: 'demo' };
 const COPY_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
@@ -525,8 +536,9 @@ async function loadClaims() {
 // Everyone on the People page: policyholders, proposals still waiting, and Priya (no policy yet).
 async function loadPeople() {
   const s = await loadClaims();
-  const pending = s.proposals.filter(p => p.status === 'Proposal received').map(p => ({
-    name: p.name, business: p.business, city: p.city, mobile: p.mobile, reference: p.reference, status: 'pending', source: 'proposal', form: p.form,
+  const waiting = { 'Proposal received': 'pending', 'Awaiting premium': 'awaiting' };
+  const pending = s.proposals.filter(p => waiting[p.status]).map(p => ({
+    name: p.name, business: p.business, city: p.city, mobile: p.mobile, reference: p.reference, status: waiting[p.status], source: 'proposal', form: p.form,
   }));
   // Priya's "no policy yet" card goes once she has a policy or a proposal waiting.
   const priyaDone = [...s.customers, ...pending].some(p => p.name.toLowerCase() === PRIYA.name.toLowerCase());
@@ -753,7 +765,8 @@ async function renderDesk() {
       </div>
       <p><strong>${esc(p.name)}</strong> · ${esc(p.business)}${p.city ? ', ' + esc(p.city) : ''} · mobile ${esc(p.mobile)}</p>
       <p>${esc(p.kind)}${p.addons.length ? ' + ' + esc(p.addons.join(', ').replace(/_/g, ' and ')) : ''} · ${p.years} year${p.years > 1 ? 's' : ''} · ${Object.entries(p.sections).map(([k, v]) => `Section ${k}${v ? ' ' + inr(v) : ''}`).join(', ')}</p>
-      ${p.status === 'Proposal received' ? `<div class="actions"><button type="button" class="primary" data-decide="${esc(p.reference)}/approve">Approve and issue policy</button><button type="button" data-decide="${esc(p.reference)}/decline">Decline</button></div>` : ''}
+      ${p.status === 'Proposal received' ? `<div class="actions"><button type="button" class="primary" data-decide="${esc(p.reference)}/approve">Approve proposal</button><button type="button" data-decide="${esc(p.reference)}/decline">Decline</button></div>`
+        : p.status === 'Awaiting premium' ? `<p class="muted">Approved. No policy and no cover until the premium is received.</p><div class="actions"><button type="button" class="primary" data-decide="${esc(p.reference)}/premium">Mark premium received and issue policy</button><button type="button" data-decide="${esc(p.reference)}/decline">Decline</button></div>` : ''}
     </div>`).join('') : '<p class="empty">No proposals yet. Fill the Apply form as Priya and press Submit to HDFC ERGO (demo).</p>';
   $('#desk-claims').innerHTML = claims.length ? claims.map(c => `
     <div class="card claim">

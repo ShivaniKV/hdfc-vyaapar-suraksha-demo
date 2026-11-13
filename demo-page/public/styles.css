@@ -458,3 +458,11 @@ legend { padding: 4px 12px; font-weight: 700; font-size: 14px; color: #fff; back
 #proposal-status.status-wait { border-left: 4px solid #d29922; }
 #proposal-status.status-ok { border-left: 4px solid #1a7f37; background: #f0faf3; }
 #proposal-status.status-no { border-left: 4px solid var(--accent); }
+.st-awaiting { --c: #b06a00; --s: #fff3dc; }
+/* Proposal progress on the Apply page: done steps ticked, the current one highlighted. */
+.steps { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 0 0 10px; padding: 0; font-size: 13px; color: var(--muted); }
+.steps li::before { content: "○ "; }
+.steps li.done { color: #1a7f37; font-weight: 600; }
+.steps li.done::before { content: "✔ "; }
+.steps li.now { color: var(--navy); font-weight: 600; }
+.steps li.now::before { content: "● "; }
