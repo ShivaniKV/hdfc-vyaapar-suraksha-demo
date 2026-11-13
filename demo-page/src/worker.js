@@ -454,6 +454,8 @@ export class ClaimsStore extends DurableObject {
 
     if (name === 'start_verification') {
       const c = findCustomer(a.policy_number, s);
+      // Weaker models call this again after a short "Yes"; a second OTP for the same policy confuses the customer.
+      if (me && (!String(a.policy_number || '').trim() || c?.policy === me.policy)) return { ok: true, already_verified: true, say: `${me.name.split(' ')[0]} is already verified in this chat. Do not ask for an OTP. If they just said yes to registering the claim, call register_claim now; otherwise continue with what they asked.` };
       const digits = digitsOf(a.mobile);
       // The model sometimes sends the OTP here instead of to verify_otp, glued to the mobile or in an otp field.
       const otp = digits.length === 16 && digits.slice(0, 10) === c?.mobile ? digits.slice(10) : digitsOf(a.otp);
@@ -501,7 +503,7 @@ export class ClaimsStore extends DurableObject {
       // Kept short: every extra word is re-sent to the model on each later step of the turn.
       return {
         ok: true, result: r.result, incident_date: r.incident_date, notes: r.notes, what_to_do_now: DO_NOW, documents: documentsFor(r.event),
-        say: `This check is complete; answer the customer now, in their language. Say the loss is ${label}${r.reasons.length ? ' because: ' + r.reasons.map(x => `${x.reason} (${x.source})`).join(' ') : '.'} Then: "HDFC ERGO's surveyor makes the final decision." Then the what to do now steps and documents, briefly (short bullets in chat; on a voice call, say the two or three most important), then ask if they want to register the claim. In chat, end with "Source: ${source}" and "The policy wording is final."`,
+        say: `This check is complete; answer the customer now, in their language. Say the loss is ${label}${r.reasons.length ? ' because: ' + r.reasons.map(x => `${x.reason} (${x.source})`).join(' ') : '.'} Then: "HDFC ERGO's surveyor makes the final decision." Then the what to do now steps and documents, briefly (short bullets in chat; on a voice call, say the two or three most important), then ask if they want to register the claim; if they say yes, call register_claim at once, without re-verifying or asking them to confirm the details. In chat, end with "Source: ${source}" and "The policy wording is final."`,
       };
     }
     if (name === 'register_claim') {
@@ -521,12 +523,12 @@ export class ClaimsStore extends DurableObject {
         status: 'Registered', registered_at: now, history: [{ status: 'Registered', at: now }],
       });
       await this.save(s);
-      return { ok: true, claim_reference: reference, result: r.result, next: NEXT_STEP.Registered, say: `Give the customer the claim reference ${reference}. Tell them they can ask "What's my claim status?" here any time.` };
+      return { ok: true, claim_reference: reference, result: r.result, next: NEXT_STEP.Registered, say: `Give the customer the claim reference ${reference}. Tell them they can ask "What's my claim status?" here any time. No Source line in this reply.` };
     }
     if (name === 'get_claim_status') {
       const mine = s.claims.filter(c => c.policy === me.policy && (!a.claim_reference || clean(c.reference) === clean(a.claim_reference)));
       if (!mine.length) return { ok: true, claims: [], say: 'No claims are registered on this policy yet.' };
-      return { ok: true, claims: mine.map(c => ({ reference: c.reference, event: c.eventLabel, registered: c.registered_at.slice(0, 10), status: c.status, next: NEXT_STEP[c.status] })) };
+      return { ok: true, say: 'Give the status and next step in a sentence or two. No Source line in this reply.', claims: mine.map(c => ({ reference: c.reference, event: c.eventLabel, registered: c.registered_at.slice(0, 10), status: c.status, next: NEXT_STEP[c.status] })) };
     }
     if (name === 'request_callback') {
       const reference = `CB-${String(s.callbacks.length + 101)}`;
