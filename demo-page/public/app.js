@@ -275,9 +275,14 @@ $('#proposal').addEventListener('submit', e => {
   lastForm = f; lastGroups = groups;
   $('#review').innerHTML = `<h2>Check your proposal</h2>${groups.map(([h, lines]) => `<h3>${h}</h3><ul>${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`).join('')}
     <p class="hint">PAN, KYC, ID proof and bank details are submitted directly to HDFC ERGO with the proposal form.</p>
-    <div class="actions"><button type="button" id="submit-proposal" class="primary">Submit to HDFC ERGO (demo)</button><button type="button" id="send-proposal">Send to the assistant</button><button type="button" id="download-pdf">Download filled proposal form</button><button type="button" id="edit-proposal">Edit</button></div>
-    <p class="hint">The download is HDFC ERGO's own proposal form with your answers written in, plus an annexure page. Check it, complete PAN, KYC and bank details, and sign.</p>
-    <div id="proposal-status" class="card" hidden></div>`;
+    <div class="submit-box">
+      <p><strong>Next step: send this proposal to HDFC ERGO.</strong> It goes to the HDFC ERGO Desk, where it is approved or declined. This page updates by itself.</p>
+      <button type="button" id="submit-proposal" class="primary big">Submit to HDFC ERGO (demo)</button>
+    </div>
+    <div id="proposal-status" class="card" hidden></div>
+    <p class="other-options">Other options: <button type="button" class="link" id="download-pdf">Download filled proposal form</button> · <button type="button" class="link" id="send-proposal">Send to the assistant</button><span id="edit-wrap"> · <button type="button" class="link" id="edit-proposal">Edit</button></span></p>
+    <p id="download-msg" class="hint" role="status"></p>
+    <p class="hint">The download is HDFC ERGO's own proposal form with your answers written in, plus an annexure page. Check it, complete PAN, KYC and bank details, and sign.</p>`;
   $('#review').hidden = false; $('#proposal').hidden = true;
   $('#review').scrollIntoView({ behavior: 'smooth' });
 });
@@ -290,7 +295,8 @@ $('#review').addEventListener('click', e => {
   if (e.target.id === 'download-pdf') {
     e.target.disabled = true; e.target.textContent = 'Preparing the PDF…';
     fillProposalPdf(lastForm, DATA.sections.filter(s => chosen.has(s.id)), lastGroups)
-      .catch(() => { $('#form-msg').textContent = 'The PDF could not be prepared. Please try again.'; })
+      .then(() => { if (!$('#submit-proposal').disabled) $('#download-msg').innerHTML = '<strong>Downloaded.</strong> The PDF stays on your computer. To send the proposal to HDFC ERGO, click <strong>Submit to HDFC ERGO</strong> above.'; })
+      .catch(() => { $('#download-msg').textContent = 'The PDF could not be prepared. Please try again.'; })
       .finally(() => { e.target.disabled = false; e.target.textContent = 'Download filled proposal form'; });
   }
 });
@@ -317,8 +323,10 @@ async function submitProposal(btn) {
     jewelleryInsured: chosen.has('ii') && answer('ii', /jewellery/i) === 'Yes', theftExtension: chosen.has('ii') && answer('ii', /^Add-ons/, true).includes('Theft extension'),
     form: lastGroups,
   }) }).catch(() => null);
-  if (!r?.ok) { btn.disabled = false; $('#form-msg').textContent = 'The proposal could not be submitted. Check the mobile number and try again.'; return; }
-  btn.textContent = 'Submitted';
+  if (!r?.ok) { btn.disabled = false; $('#download-msg').textContent = 'The proposal could not be submitted. Check the mobile number and try again.'; return; }
+  btn.textContent = 'Submitted to HDFC ERGO';
+  $('#download-msg').textContent = '';
+  $('#edit-wrap').hidden = true;
   showProposal(await r.json());
 }
 
@@ -330,12 +338,16 @@ function showProposal(p) {
     const ask = `I have a Vyaapar Suraksha policy. Policy number ${p.policy}, mobile ${p.mobile}. What does it cover?`;
     box.innerHTML = `<h3>Policy issued: ${esc(p.policy)}</h3>
       <p>HDFC ERGO accepted proposal ${esc(p.reference)}. You are now a policyholder: registered mobile ${esc(p.mobile)}, demo OTP 123456.</p>
-      <button type="button" class="primary" data-ask="${esc(ask)}">Ask the assistant about my policy</button>`;
+      <div class="actions"><button type="button" class="primary" data-ask="${esc(ask)}">Ask the assistant about my policy</button><button type="button" data-go="people">See it on People</button></div>`;
+    box.className = 'card status-ok';
     return;
   }
+  box.className = p.status === 'Not accepted' ? 'card status-no' : 'card status-wait';
   box.innerHTML = p.status === 'Not accepted'
-    ? `<h3>Proposal ${esc(p.reference)}: not accepted</h3><p>HDFC ERGO did not accept this proposal. Please contact HDFC ERGO on 022 6158 2020.</p>`
-    : `<h3>Proposal ${esc(p.reference)} received</h3><p class="muted">Waiting for HDFC ERGO. In the demo, approve it on the HDFC ERGO Desk tab; this updates by itself.</p>`;
+    ? `<h3>Proposal ${esc(p.reference)}: not accepted</h3><p>HDFC ERGO did not accept this proposal. Please contact HDFC ERGO on 022 6158 2020. You can change your answers with <strong>Edit</strong> and submit again.</p>`
+    : `<h3>Proposal ${esc(p.reference)} received ⏳</h3><p class="muted">Waiting for HDFC ERGO to approve or decline it. In the demo, do that on the HDFC ERGO Desk; this box updates by itself.</p>
+      <div class="actions"><button type="button" class="primary" data-go="desk">Open the HDFC ERGO Desk</button></div>`;
+  if (p.status === 'Not accepted') { $('#edit-wrap').hidden = false; const b = $('#submit-proposal'); b.disabled = false; b.textContent = 'Submit again'; }
   if (p.status === 'Proposal received') {
     proposalTimer = setTimeout(() => fetch(`/api/proposals/${p.reference}`).then(r => r.json()).then(showProposal).catch(() => {}), 4000);
   }

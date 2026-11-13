@@ -448,3 +448,13 @@ legend { padding: 4px 12px; font-weight: 700; font-size: 14px; color: #fff; back
   .brand small { display: none; }
   .quick-list, .person-grid, .entry-grid { grid-template-columns: 1fr; }
 }
+
+/* Apply review: Submit is the one main step; the rest sit underneath as small links. */
+.submit-box { margin: 18px 0 12px; padding: 16px 18px; border: 2px solid var(--accent); border-radius: 12px; background: #fff7f8; }
+.submit-box p { margin: 0 0 12px; }
+.primary.big { padding: 13px 26px; font-size: 16px; }
+.other-options { margin: 10px 0 4px; font-size: 14px; color: var(--muted); }
+.other-options .link { font-size: 14px; }
+#proposal-status.status-wait { border-left: 4px solid #d29922; }
+#proposal-status.status-ok { border-left: 4px solid #1a7f37; background: #f0faf3; }
+#proposal-status.status-no { border-left: 4px solid var(--accent); }
