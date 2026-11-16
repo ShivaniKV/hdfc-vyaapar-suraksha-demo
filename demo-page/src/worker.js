@@ -522,13 +522,15 @@ export class ClaimsStore extends DurableObject {
       if (c && session.pending === c.policy && otp) return this.call('verify_otp', { otp }, conv);
       const mobile = otp && digits.length === 16 ? digits.slice(0, 10) : digits.slice(-10);
       // Someone who applied but has no policy yet: say where it stands instead of "no match".
-      const waiting = (!c || c.mobile !== mobile) && s.proposals.find(p => p.mobile === mobile && ['Proposal received', 'Awaiting premium'].includes(p.status) && String(a.name || '').trim() && nameMatches(a.name, p.name));
+      // Newest first: the latest proposal from this person decides what to tell them.
+      const newest = String(a.name || '').trim() && s.proposals.find(p => p.mobile === mobile && nameMatches(a.name, p.name));
+      const waiting = (!c || c.mobile !== mobile) && ['Proposal received', 'Awaiting premium'].includes(newest?.status) && newest;
       if (waiting) return { ok: false, no_policy_yet: true, say: waiting.status === 'Awaiting premium'
         ? `This mobile has proposal ${waiting.reference}, approved by HDFC ERGO but the premium has not been received yet. There is no policy number and no cover until the premium is paid; nothing that happens before that is covered. Tell the customer this and that the status shows in the Apply tab.`
         : `This mobile has proposal ${waiting.reference}, still waiting for HDFC ERGO's decision. There is no policy number and no cover yet. Tell the customer this and that the status shows in the Apply tab.` };
-      const latest = !c && String(a.name || '').trim() && [...s.proposals].reverse().find(p => p.mobile === mobile && nameMatches(a.name, p.name));
+      const latest = !c && newest;
       if (latest?.status === 'Not accepted') return { ok: false, no_policy_yet: true, say: `This mobile's proposal ${latest.reference} was not accepted by HDFC ERGO, so there is no policy and no cover. Tell the customer this, that they can correct and submit it again from the Apply tab, or ask for a call-back to understand why.` };
-      if (latest?.status === 'Policy issued' && !String(a.policy_number || '').trim()) return { ok: false, say: 'HDFC ERGO has issued a policy for this proposal. Ask the customer for the policy number shown in the Apply tab, then call start_verification with name, policy number and mobile.' };
+      if (latest?.status === 'Policy issued' && !String(a.policy_number || '').trim()) return { ok: false, policy_issued: true, say: `Good news to give: HDFC ERGO accepted proposal ${latest.reference}${latest.resubmit_of ? ' (the resubmitted one)' : ''}, the premium was received and the policy is issued. The policy number shows in the Apply tab. To talk about their cover, ask for that policy number, then call start_verification with name, policy number and mobile.` };
       if (!c && !String(a.policy_number || '').trim()) return { ok: false, say: 'No pending proposal matches that name and mobile. Ask the customer to check both, or for their policy number if they already have one.' };
       if (!c || c.mobile !== mobile) return { ok: false, say: 'No policy matches that policy number and mobile number. Ask the customer to check both, or contact HDFC ERGO on 022 6158 2020 / 022 6234 6234.' };
       if (!String(a.name || '').trim()) return { ok: false, say: 'Ask for the policyholder\'s name, then call start_verification again with the name, policy number and mobile.' };
