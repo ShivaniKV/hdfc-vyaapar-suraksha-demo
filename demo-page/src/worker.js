@@ -354,8 +354,12 @@ export class ClaimsStore extends DurableObject {
         claims: s.claims, callbacks: s.callbacks, statuses: STATUSES, proposals: s.proposals, today: today(),
       });
     }
-    // Reset clears claims, call-backs, sessions and proposals; added people stay until removed on the People page.
+    // Reset clears claims, call-backs, sessions, proposals and the policies issued from them;
+    // people added with "+ Add a person" stay until removed on the People page.
     if (url.pathname === '/api/reset' && request.method === 'POST') {
+      const people = (await this.ctx.storage.get('people')) || { list: [], next: 10004 };
+      people.list = people.list.filter(c => c.source !== 'proposal');
+      await this.ctx.storage.put('people', people);
       await this.ctx.storage.delete('state');
       return json({ ok: true });
     }
