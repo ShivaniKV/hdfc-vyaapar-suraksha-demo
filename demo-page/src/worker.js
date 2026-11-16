@@ -178,8 +178,8 @@ const DO_NOW = [
 const TOOLS = [
   {
     name: 'start_verification',
-    description: 'Start verifying an existing policyholder. Call this when the customer says they already have a Vyaapar Suraksha policy and wants help with their own policy or claim, once they have given their name, policy number and registered mobile number. Checks the name against the policy and sends a one-time password (OTP) to their mobile.',
-    input_schema: { type: 'object', properties: { name: { type: 'string', description: 'The name the customer gave' }, policy_number: { type: 'string', description: 'e.g. VS-2026-10001' }, mobile: { type: 'string', description: 'Registered mobile number' } }, required: ['policy_number', 'mobile'] },
+    description: 'Start verifying an existing policyholder. Call this when the customer says they already have a Vyaapar Suraksha policy and wants help with their own policy or claim, once they have given their name, policy number and registered mobile number. Checks the name against the policy and sends a one-time password (OTP) to their mobile. If they applied but have no policy number yet, call it with just their name and mobile to learn where their proposal stands.',
+    input_schema: { type: 'object', properties: { name: { type: 'string', description: 'The name the customer gave' }, policy_number: { type: 'string', description: 'e.g. VS-2026-10001' }, mobile: { type: 'string', description: 'Registered mobile number' } }, required: ['mobile'] },
   },
   {
     name: 'verify_otp',
@@ -469,6 +469,7 @@ export class ClaimsStore extends DurableObject {
       if (waiting) return { ok: false, no_policy_yet: true, say: waiting.status === 'Awaiting premium'
         ? `This mobile has proposal ${waiting.reference}, approved by HDFC ERGO but the premium has not been received yet. There is no policy number and no cover until the premium is paid; nothing that happens before that is covered. Tell the customer this and that the status shows in the Apply tab.`
         : `This mobile has proposal ${waiting.reference}, still waiting for HDFC ERGO's decision. There is no policy number and no cover yet. Tell the customer this and that the status shows in the Apply tab.` };
+      if (!c && !String(a.policy_number || '').trim()) return { ok: false, say: 'No pending proposal matches that name and mobile. Ask the customer to check both, or for their policy number if they already have one.' };
       if (!c || c.mobile !== mobile) return { ok: false, say: 'No policy matches that policy number and mobile number. Ask the customer to check both, or contact HDFC ERGO on 022 6158 2020 / 022 6234 6234.' };
       if (!String(a.name || '').trim()) return { ok: false, say: 'Ask for the policyholder\'s name, then call start_verification again with the name, policy number and mobile.' };
       if (!nameMatches(a.name, c.name)) return { ok: false, say: 'The name does not match the name on this policy. Ask the customer to give the policyholder\'s name as on the policy. Do not reveal the name on the policy.' };
