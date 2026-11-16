@@ -235,8 +235,8 @@ const TOOLS = [
   },
   {
     name: 'submit_proposal',
-    description: 'Submit to HDFC ERGO a proposal the customer filled and reviewed in the Apply tab (or submit again one that was not accepted). No OTP needed. First call it with their name and the mobile on the proposal to get a one-line summary; read it back and ask if they want it submitted. Only after a clear yes, call it again with confirm true.',
-    input_schema: { type: 'object', properties: { name: { type: 'string', description: 'Name on the proposal' }, mobile: { type: 'string', description: 'Mobile on the proposal' }, confirm: { type: 'boolean', description: 'true only after the customer clearly said yes to submitting' } }, required: ['name', 'mobile'] },
+    description: 'Submit to HDFC ERGO a proposal the customer filled and reviewed in the Apply tab (or submit again one that was not accepted). No OTP needed. First call it with their name and the mobile on the proposal to get a one-line summary; read it back and ask if they want it submitted. Only after a clear yes, call it again with confirm true. If it was declined before, follow what it says: ask about changes first.',
+    input_schema: { type: 'object', properties: { name: { type: 'string', description: 'Name on the proposal' }, mobile: { type: 'string', description: 'Mobile on the proposal' }, confirm: { type: 'boolean', description: 'true only after the customer clearly said yes to submitting' }, edit: { type: 'boolean', description: 'true to open their form in the Apply tab for changes' }, unchanged: { type: 'boolean', description: 'true only if they insist on resubmitting a declined proposal without changes' } }, required: ['name', 'mobile'] },
   },
   {
     name: 'request_callback',
@@ -304,6 +304,31 @@ function readProposal(p) {
   };
 }
 
+// What differs between a declined proposal and a new one from the same person, in a few words.
+function changesFrom(a, b) {
+  const out = [], as = a.sections || {}, bs = b.sections || {};
+  if (a.kind !== b.kind) out.push('Section I type');
+  if (String(a.addons) !== String(b.addons)) out.push('add-ons');
+  for (const k of new Set([...Object.keys(as), ...Object.keys(bs)])) {
+    if (!(k in as)) out.push(`Section ${k} added`);
+    else if (!(k in bs)) out.push(`Section ${k} removed`);
+    else if (as[k] !== bs[k]) out.push(`Section ${k} value`);
+  }
+  if (a.years !== b.years) out.push('tenure');
+  if (a.start !== b.start) out.push('start date');
+  if (a.jewelleryInsured !== b.jewelleryInsured) out.push('jewellery cover');
+  if (a.theftExtension !== b.theftExtension) out.push('Theft Extension');
+  const lines = (f, h) => JSON.stringify((f || []).find(g => g[0] === h)?.[1] || []);
+  for (const [h] of b.form || []) {
+    if (lines(a.form, h) === lines(b.form, h)) continue;
+    if (/^Section I$|^Optional sections$/.test(h)) { if (!out.some(x => /^Section /.test(x))) out.push(`${h} details`); }
+    else out.push(h.toLowerCase() === 'about you' ? 'personal details' : `${h.toLowerCase()} details`);
+  }
+  return [...new Set(out)];
+}
+// The person's latest proposal, if HDFC ERGO declined it: a new one from them is a resubmission.
+const declinedBefore = (s, p) => { const last = s.proposals.find(x => x.mobile === p.mobile && nameMatches(p.name, x.name)); return last?.status === 'Not accepted' ? last : null; };
+
 // The filled proposal form, as headed groups of lines: [[heading, [line, ...]], ...].
 function readForm(f) {
   if (!Array.isArray(f)) return [];
@@ -334,8 +359,10 @@ export class ClaimsStore extends DurableObject {
   }
   newProposal(s, p) {
     const reference = `PRP-2026-${String(101 + s.proposals.length).padStart(4, '0')}`;
-    const { id, at, reference: _r, ...fields } = p;
-    s.proposals.unshift({ reference, ...fields, status: 'Proposal received', at: new Date().toISOString(), via: id ? 'chat' : 'apply' });
+    const { id, at, reference: _r, edit_requested: _e, ...fields } = p;
+    const prev = declinedBefore(s, p);
+    s.proposals.unshift({ reference, ...fields, status: 'Proposal received', at: new Date().toISOString(), via: id ? 'chat' : 'apply',
+      ...(prev ? { resubmit_of: prev.reference, changes: changesFrom(prev, p) } : {}) });
     return reference;
   }
 
@@ -410,7 +437,7 @@ export class ClaimsStore extends DurableObject {
       const s = await this.state();
       const d = s.drafts.find(x => x.id === dr[1]);
       if (!d) return json({ error: 'No such draft' }, 404);
-      if (request.method === 'GET') return json({ id: d.id, reference: d.reference || null });
+      if (request.method === 'GET') return json({ id: d.id, reference: d.reference || null, edit_requested: d.edit_requested || null });
       if (request.method === 'POST') { d.reference = String((await request.json().catch(() => ({}))).reference || '').slice(0, 20) || null; await this.save(s); return json({ ok: true }); }
     }
     if (url.pathname === '/api/proposals' && request.method === 'POST') {
@@ -530,8 +557,18 @@ export class ClaimsStore extends DurableObject {
       if (!d) return { ok: false, say: 'There is no reviewed proposal for that name and mobile. Ask them to fill the Apply tab and click "Review my proposal" first, then ask you again. Do not collect the form in chat.' };
       const last = d.reference && s.proposals.find(x => x.reference === d.reference);
       if (last && last.status !== 'Not accepted') return { ok: false, already_submitted: true, reference: last.reference, status: last.status, say: `This proposal was already submitted as ${last.reference}; its status is "${last.status}". Tell them; it shows in the Apply tab. Do not submit again.` };
+      // Opening the form for changes: the Apply tab shows it with their previous answers.
+      if (a.edit === true) {
+        d.edit_requested = Date.now();
+        await this.save(s);
+        return { ok: true, opened_for_editing: true, say: 'Their proposal form is now open in the Apply tab with all their previous answers filled in. Tell them to change what they need, click "Review my proposal", and then ask you to submit it. Do not submit anything now.' };
+      }
+      const prev = declinedBefore(s, d);
+      const changes = prev ? changesFrom(prev, d) : [];
+      // A declined proposal sent back unchanged will most likely be declined again: ask first.
+      if (prev && !changes.length && !(a.confirm === true && a.unchanged === true)) return { ok: true, needs_decision: true, declined: prev.reference, say: `HDFC ERGO did not accept proposal ${prev.reference}, and this is the same proposal with nothing changed. Tell them that and ask if they want to change anything before resubmitting. If yes, call submit_proposal with edit true; this opens their form in the Apply tab with their answers filled in. If no, say once that the same proposal will most likely be declined again and offer a call-back from HDFC ERGO to learn why; only if they still want to resubmit it unchanged, call submit_proposal with confirm true and unchanged true.` };
       const sections = Object.entries(d.sections).map(([k, v]) => `Section ${k}${v ? ' ' + rupees(v) : ''}`).join(', ');
-      const summary = `${d.name}, mobile ${d.mobile}, ${d.kind}${d.addons.length ? ' with ' + d.addons.map(x => x === 'storm_flood' ? 'storm and flood' : 'earthquake').join(' and ') : ''}, ${sections}, ${d.years} year${d.years > 1 ? 's' : ''}${last ? ' (submitting again after it was not accepted)' : ''}`;
+      const summary = `${d.name}, mobile ${d.mobile}, ${d.kind}${d.addons.length ? ' with ' + d.addons.map(x => x === 'storm_flood' ? 'storm and flood' : 'earthquake').join(' and ') : ''}, ${sections}, ${d.years} year${d.years > 1 ? 's' : ''}${prev ? (changes.length ? ` (resubmitting ${prev.reference} with changes: ${changes.join(', ')})` : ` (resubmitting ${prev.reference} unchanged)`) : ''}`;
       if (a.confirm !== true) return { ok: true, needs_confirmation: true, summary, say: 'Read this summary back in one line and ask if they want it submitted to HDFC ERGO now. Only if they clearly say yes, call submit_proposal again with the same name and mobile and confirm true.' };
       const reference = this.newProposal(s, d);
       d.reference = reference;

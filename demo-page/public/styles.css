@@ -466,3 +466,9 @@ legend { padding: 4px 12px; font-weight: 700; font-size: 14px; color: #fff; back
 .steps li.done::before { content: "✔ "; }
 .steps li.now { color: var(--navy); font-weight: 600; }
 .steps li.now::before { content: "● "; }
+
+.resubmit { margin: 4px 0; padding: 4px 10px; border-radius: 6px; background: #e8f0fe; color: #1a3d8f; font-size: 14px; }
+.resubmit.same { background: #fff4dc; color: #8a5a00; }
+#resubmit-note { margin-bottom: 16px; }
+#resubmit-note h3 { margin: 0 0 4px; }
+#resubmit-note p { margin: 0; }

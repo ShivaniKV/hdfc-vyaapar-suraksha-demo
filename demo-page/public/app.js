@@ -283,13 +283,14 @@ $('#proposal').addEventListener('submit', e => {
     <p class="other-options">Other options: <button type="button" class="link" id="download-pdf">Download filled proposal form</button> · <button type="button" class="link" id="send-proposal">Send to the assistant</button><span id="edit-wrap"> · <button type="button" class="link" id="edit-proposal">Edit</button></span></p>
     <p id="download-msg" class="hint" role="status"></p>
     <p class="hint">The download is HDFC ERGO's own proposal form with your answers written in, plus an annexure page. Check it, complete PAN, KYC and bank details, and sign.</p>`;
-  $('#review').hidden = false; $('#proposal').hidden = true; $('#new-application').hidden = false;
+  $('#review').hidden = false; $('#proposal').hidden = true; $('#new-application').hidden = false; $('#resubmit-note').hidden = true;
   saveDraft();
   $('#review').scrollIntoView({ behavior: 'smooth' });
 });
 
 $('#review').addEventListener('click', e => {
   if (e.target.id === 'edit-proposal') { $('#review').hidden = true; $('#proposal').hidden = false; $('#new-application').hidden = true; }
+  if (e.target.id === 'submit-proposal' && e.target.dataset.mode === 'edit') { openForEdit(); return; }
   if (e.target.id === 'send-proposal') sendToChat(summaryText);
   if (e.target.id === 'submit-proposal') submitProposal(e.target);
   if (e.target.dataset.ask) sendToChat(e.target.dataset.ask);
@@ -304,7 +305,7 @@ $('#review').addEventListener('click', e => {
 
 // A blank form for the next applicant (the previous proposal stays on the Desk).
 function newApplication() {
-  clearTimeout(proposalTimer); clearTimeout(draftTimer); draftId = null;
+  clearTimeout(proposalTimer); clearTimeout(draftTimer); draftId = null; declinedRef = null; $('#resubmit-note').hidden = true;
   [...chosen].forEach(id => setChosen(id, false));
   renderForm();
   summaryText = ''; lastForm = lastGroups = undefined;
@@ -314,7 +315,16 @@ function newApplication() {
 $('#new-application').addEventListener('click', newApplication);
 
 // ---------- Demo submission: the proposal goes to the HDFC ERGO Desk, where approving it issues a policy ----------
-let proposalTimer, draftTimer, draftId, shownRef;
+let proposalTimer, draftTimer, draftId, shownRef, declinedRef, seenEdit;
+// After a decline: show the form again with every answer kept, to change before resubmitting.
+function openForEdit(byAssistant) {
+  clearTimeout(draftTimer);
+  $('#review').hidden = true; $('#proposal').hidden = false; $('#new-application').hidden = true;
+  const note = $('#resubmit-note');
+  note.innerHTML = `<h3>${byAssistant ? 'The assistant opened your proposal for changes' : 'Change your proposal'}</h3><p>HDFC ERGO did not accept proposal ${esc(declinedRef || '')} as it was. Your previous answers are filled in below. Change what you need, then click <strong>Review my proposal</strong> and submit it here or ask the assistant to submit it.</p>`;
+  note.hidden = false;
+  note.scrollIntoView({ behavior: 'smooth' });
+}
 // What a proposal sends to HDFC ERGO (used for Submit and for the draft the chat can submit).
 function proposalBody() {
   const f = lastForm, g = k => f.get(k) || '';
@@ -350,7 +360,7 @@ async function submitProposal(btn) {
 function markSubmitted(p) {
   shownRef = p.reference;
   const btn = $('#submit-proposal');
-  btn.disabled = true; btn.textContent = 'Submitted to HDFC ERGO';
+  btn.disabled = true; btn.textContent = 'Submitted to HDFC ERGO'; delete btn.dataset.mode;
   $('#download-msg').textContent = '';
   $('#edit-wrap').hidden = true;
   showProposal(p);
@@ -368,6 +378,7 @@ function watchDraft(id) {
   draftTimer = setTimeout(async () => {
     if (id !== draftId || $('#review').hidden) return;
     const d = await fetch(`/api/drafts/${id}`).then(r => r.json()).catch(() => null);
+    if (d?.edit_requested && d.edit_requested !== seenEdit) { seenEdit = d.edit_requested; openForEdit(true); toast('The assistant opened your proposal for changes'); return; }
     if (d?.reference && d.reference !== shownRef) {
       const p = await fetch(`/api/proposals/${d.reference}`).then(r => r.json()).catch(() => null);
       if (p?.reference) { markSubmitted(p); toast('Submitted through the assistant: ' + p.reference); }
@@ -399,11 +410,11 @@ function showProposal(p) {
   }
   box.className = p.status === 'Not accepted' ? 'card status-no' : 'card status-wait';
   box.innerHTML = p.status === 'Not accepted'
-    ? `<h3>Proposal ${esc(p.reference)}: not accepted</h3><p>HDFC ERGO did not accept this proposal. Please contact HDFC ERGO on 022 6158 2020. You can change your answers with <strong>Edit</strong> and submit again.</p>`
+    ? `<h3>Proposal ${esc(p.reference)}: not accepted</h3><p>HDFC ERGO did not accept this proposal. Sending it back unchanged will most likely get the same answer: click <strong>Edit and resubmit</strong> to change your answers first, or call HDFC ERGO on 022 6158 2020 to ask why.</p>`
     : p.status === 'Awaiting premium'
     ? `${proposalSteps(p.status)}<h3>Proposal ${esc(p.reference)} approved: pay the premium 💳</h3><p class="muted">HDFC ERGO has approved it. The policy is issued and cover starts only once the premium is received; until then nothing is covered. In the demo, mark the premium received on the HDFC ERGO Desk.</p>${desk}`
     : `${proposalSteps(p.status)}<h3>Proposal ${esc(p.reference)} received ⏳</h3><p class="muted">Waiting for HDFC ERGO to approve or decline it. In the demo, do that on the HDFC ERGO Desk; this box updates by itself.</p>${desk}`;
-  if (p.status === 'Not accepted') { $('#edit-wrap').hidden = false; const b = $('#submit-proposal'); b.disabled = false; b.textContent = 'Submit again'; }
+  if (p.status === 'Not accepted') { declinedRef = p.reference; $('#edit-wrap').hidden = false; const b = $('#submit-proposal'); b.disabled = false; b.textContent = 'Edit and resubmit'; b.dataset.mode = 'edit'; }
   if (p.status === 'Proposal received' || p.status === 'Awaiting premium') {
     proposalTimer = setTimeout(() => fetch(`/api/proposals/${p.reference}`).then(r => r.json()).then(showProposal).catch(() => {}), 4000);
   }
@@ -810,6 +821,7 @@ async function renderDesk() {
         <span class="muted">${when(p.at)}</span>
       </div>
       <p><strong>${esc(p.name)}</strong> · ${esc(p.business)}${p.city ? ', ' + esc(p.city) : ''} · mobile ${esc(p.mobile)}</p>
+      ${p.resubmit_of ? `<p class="resubmit ${p.changes?.length ? '' : 'same'}">Resubmission of ${esc(p.resubmit_of)} · ${p.changes?.length ? 'changed: ' + esc(p.changes.join(', ')) : 'unchanged'}</p>` : ''}
       <p>${esc(p.kind)}${p.addons.length ? ' + ' + esc(p.addons.join(', ').replace(/_/g, ' and ')) : ''} · ${p.years} year${p.years > 1 ? 's' : ''} · ${Object.entries(p.sections).map(([k, v]) => `Section ${k}${v ? ' ' + inr(v) : ''}`).join(', ')}</p>
       ${p.status === 'Proposal received' ? `<div class="actions"><button type="button" class="primary" data-decide="${esc(p.reference)}/approve">Approve proposal</button><button type="button" data-decide="${esc(p.reference)}/decline">Decline</button></div>`
         : p.status === 'Awaiting premium' ? `<p class="muted">Approved. No policy and no cover until the premium is received.</p><div class="actions"><button type="button" class="primary" data-decide="${esc(p.reference)}/premium">Mark premium received and issue policy</button><button type="button" data-decide="${esc(p.reference)}/decline">Decline</button></div>` : ''}
