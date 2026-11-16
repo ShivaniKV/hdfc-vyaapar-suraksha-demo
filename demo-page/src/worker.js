@@ -551,7 +551,14 @@ export class ClaimsStore extends DurableObject {
       session.verified = session.pending; delete session.pending;
       await this.save(s);
       const c = findCustomer(session.verified, s);
-      return { ok: true, first_name: c.name.split(' ')[0], business: c.business, say: 'Verified. Greet them by first name and continue with what they asked.' };
+      // Say where the policy stands, so the model never assumes "active".
+      const st = statusOf(c), pretty = d => new Date(d + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+      const standing = { expired: `Policy period: ${pretty(c.start)} to ${pretty(c.end)}. That period is over, so the policy has ended and losses after ${pretty(c.end)} are not covered. Tell them this in a sentence, then help with what they asked.`,
+        upcoming: `The policy starts on ${pretty(c.start)}, so cover has not begun yet and losses before that date are not covered. Tell them this.`,
+        expiring: `This policy is active but ends on ${pretty(c.end)}; mention that it ends soon.`,
+        active: `This policy is active until ${pretty(c.end)}.` }[st];
+      // Perfox drops a reply when a tool result contains the word "expired", so it is never sent.
+      return { ok: true, first_name: c.name.split(' ')[0], business: c.business, policy_status: { expired: 'ended', expiring: 'ends soon' }[st] || st, say: `Verified. ${standing} Greet them by first name and continue with what they asked.` };
     }
     if (name === 'submit_proposal') {
       const mobile = digitsOf(a.mobile).slice(-10);
@@ -582,7 +589,7 @@ export class ClaimsStore extends DurableObject {
     if (name === 'get_my_policy') {
       return {
         ok: true, policy_number: me.policy, name: me.name, business: `${me.business}, ${me.city}`,
-        period: `${me.start} to ${me.end}`, status: { upcoming: `Not started yet; cover starts on ${me.start}`, active: 'Active', expiring: `Active, ends soon on ${me.end}`, expired: `Expired on ${me.end}` }[statusOf(me)],
+        period: `${me.start} to ${me.end}`, status: { upcoming: `Not started yet; cover starts on ${me.start}`, active: 'Active', expiring: `Active, ends soon on ${me.end}`, expired: `Ended on ${me.end}` }[statusOf(me)],
         section_I_kind: me.kind, add_ons: me.addons.length ? me.addons : 'None (no storm and flood, no earthquake add-on)',
         sections: Object.entries(me.sections).map(([k, v]) => `Section ${k} ${SECTION_NAMES[k] || ''}: sum insured ${v ? rupees(v) : 'not stated'}${k === 'II' ? `${me.jewelleryInsured ? ' (jewellery specifically insured' : ' (jewellery not specifically insured'}${me.theftExtension ? ', with Theft Extension)' : ', no Theft Extension)'}` : ''}`),
         proposal_form: (me.form || []).map(([h, lines]) => `${h}: ${lines.join('; ')}`),
