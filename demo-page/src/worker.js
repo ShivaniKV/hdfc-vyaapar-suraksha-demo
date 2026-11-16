@@ -595,6 +595,15 @@ export class ClaimsStore extends DurableObject {
       await this.save(s);
       const label = r.result === 'likely_covered' ? 'likely covered' : r.result === 'likely_not_covered' ? 'likely not covered' : 'needs review by HDFC ERGO';
       const source = r.reasons.length ? r.reasons[0].source : r.section ? `Policy Wordings, Section ${r.section}` : 'Policy Wordings';
+      // Likely not covered: no surveyor steps or document list (they suggest a payout is coming); an honest offer to register instead.
+      if (r.result === 'likely_not_covered') {
+        const police = /theft|burglary|riot|malicious/.test(r.event);
+        return {
+          ok: true, result: r.result, incident_date: r.incident_date, notes: r.notes,
+          what_to_do_now: [police ? 'File a police FIR if not done already; it is needed whatever happens with insurance.' : 'Report it to the authorities if needed.', 'Keep photos of the loss and any bills.'],
+          say: `This check is complete; answer the customer now, in their language. Say the loss is likely not covered because: ${r.reasons.map(x => `${x.reason} (${x.source})`).join(' ')} Then: "HDFC ERGO's surveyor makes the final decision." Give only the two what to do now steps; do not list claim documents or surveyor inspection steps. Then say honestly that they can still register it so HDFC ERGO reviews it, but based on their policy it is likely not payable, and ask if they want to. If they say yes, call register_claim at once, without re-verifying or asking them to confirm the details. In chat, end with "Source: ${source}" and "The policy wording is final."`,
+        };
+      }
       // Kept short: every extra word is re-sent to the model on each later step of the turn.
       return {
         ok: true, result: r.result, incident_date: r.incident_date, notes: r.notes, what_to_do_now: DO_NOW, documents: documentsFor(r.event),
@@ -618,6 +627,7 @@ export class ClaimsStore extends DurableObject {
         status: 'Registered', registered_at: now, history: [{ status: 'Registered', at: now }],
       });
       await this.save(s);
+      if (r.result === 'likely_not_covered') return { ok: true, claim_reference: reference, result: r.result, documents: documentsFor(r.event), say: `Give the customer the claim reference ${reference}. Say HDFC ERGO will review it and decide, and list the documents to keep ready briefly (short bullets in chat; on a voice call, the two most important). Tell them they can ask "What's my claim status?" here any time. No Source line in this reply.` };
       return { ok: true, claim_reference: reference, result: r.result, next: NEXT_STEP.Registered, say: `Give the customer the claim reference ${reference}. Tell them they can ask "What's my claim status?" here any time. No Source line in this reply.` };
     }
     if (name === 'get_claim_status') {
