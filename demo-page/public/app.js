@@ -520,8 +520,12 @@ Perfox('on', 'ready', () => Perfox('open'));
 Perfox('on', 'message:received', ({ text }) => {
   const ids = [...(text || '').matchAll(/#section-([ivx]+)|Source:[^\n]*?Section\s+([IVX]+)\b/gi)];
   if (ids.length) { const m = ids[ids.length - 1]; highlight(m[1] || m[2]); }
-  // When the assistant hands over to the form, bring the Apply tab forward and move the chat aside.
-  if (/Apply tab/i.test(text || '')) { show('apply'); Perfox('close'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  // When the assistant points to the Apply tab, make the Apply button glow; never switch tabs or close the chat mid-conversation.
+  if (/Apply tab/i.test(text || '') && current !== 'apply') {
+    const t = document.querySelector('.tab[data-view="apply"]');
+    t.classList.remove('glow'); void t.offsetWidth; t.classList.add('glow');
+    setTimeout(() => t.classList.remove('glow'), 6000);
+  }
 });
 
 // The assistant writes its Source line as plain text ("Source: Policy Wordings, Section II, page 26").

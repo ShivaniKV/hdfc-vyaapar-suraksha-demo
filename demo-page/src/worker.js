@@ -249,6 +249,14 @@ const clean = s => String(s || '').replace(/[^0-9a-z]/gi, '').toUpperCase();
 // The three made-up customers plus the people added on the People page or issued from a proposal (cleared by Reset).
 const allCustomers = s => [...CUSTOMERS, ...(s.people?.list || [])];
 // Where a policy stands today: not started yet, active, ending within 30 days, or expired.
+const pretty = d => new Date(d + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+// What to tell the model about where the policy stands (never the word "expired": Perfox drops such replies).
+function standingOf(c) {
+  return { expired: `Policy period: ${pretty(c.start)} to ${pretty(c.end)}. That period is over, so the policy has ended and losses after ${pretty(c.end)} are not covered. Tell them this in a sentence, then help with what they asked.`,
+    upcoming: `The policy starts on ${pretty(c.start)}, so cover has not begun yet and losses before that date are not covered. Tell them this.`,
+    expiring: `This policy is active but ends on ${pretty(c.end)}; mention that it ends soon.`,
+    active: `This policy is active until ${pretty(c.end)}.` }[statusOf(c)];
+}
 function statusOf(c) {
   const t = today();
   return c.start > t ? 'upcoming' : c.end < t ? 'expired' : daysBetween(t, c.end) <= 30 ? 'expiring' : 'active';
@@ -540,7 +548,8 @@ export class ClaimsStore extends DurableObject {
       return { ok: true, say: `An OTP has been sent to the mobile number ending ${c.mobile.slice(-4)}. Ask the customer to tell you the OTP.`, next: 'When the customer sends the 6-digit OTP, call verify_otp with it. Do not call start_verification again.' };
     }
     if (name === 'verify_otp') {
-      if (!session.pending && me) return { ok: true, first_name: me.name.split(' ')[0], say: 'Already verified. Continue with what the customer asked.' };
+      // Already verified (the model sometimes calls this again on the next message): repeat where the policy stands.
+      if (!session.pending && me) return { ok: true, first_name: me.name.split(' ')[0], say: `Already verified; do not ask for an OTP. ${standingOf(me)} Continue with what the customer asked.` };
       if (!session.pending) return needVerified;
       if (digitsOf(a.otp) !== DEMO_OTP) {
         session.tries = (session.tries || 0) + 1;
@@ -552,11 +561,7 @@ export class ClaimsStore extends DurableObject {
       await this.save(s);
       const c = findCustomer(session.verified, s);
       // Say where the policy stands, so the model never assumes "active".
-      const st = statusOf(c), pretty = d => new Date(d + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-      const standing = { expired: `Policy period: ${pretty(c.start)} to ${pretty(c.end)}. That period is over, so the policy has ended and losses after ${pretty(c.end)} are not covered. Tell them this in a sentence, then help with what they asked.`,
-        upcoming: `The policy starts on ${pretty(c.start)}, so cover has not begun yet and losses before that date are not covered. Tell them this.`,
-        expiring: `This policy is active but ends on ${pretty(c.end)}; mention that it ends soon.`,
-        active: `This policy is active until ${pretty(c.end)}.` }[st];
+      const st = statusOf(c), standing = standingOf(c);
       // Perfox drops a reply when a tool result contains the word "expired", so it is never sent.
       return { ok: true, first_name: c.name.split(' ')[0], business: c.business, policy_status: { expired: 'ended', expiring: 'ends soon' }[st] || st, say: `Verified. ${standing} Greet them by first name and continue with what they asked.` };
     }
@@ -602,6 +607,14 @@ export class ClaimsStore extends DurableObject {
       await this.save(s);
       const label = r.result === 'likely_covered' ? 'likely covered' : r.result === 'likely_not_covered' ? 'likely not covered' : 'needs review by HDFC ERGO';
       const source = r.reasons.length ? r.reasons[0].source : r.section ? `Policy Wordings, Section ${r.section}` : 'Policy Wordings';
+      // A loss outside the policy period cannot be claimed: say so plainly, nothing to register.
+      if (r.incident_date > me.end || r.incident_date < me.start) {
+        const after = r.incident_date > me.end;
+        session.outside = r.incident_date;
+        await this.save(s);
+        return { ok: true, result: 'not_covered_outside_period', incident_date: r.incident_date,
+          say: `Answer now, in their language. The loss on ${pretty(r.incident_date)} is not covered: ${after ? `the policy period ended on ${pretty(me.end)}` : `the policy period starts on ${pretty(me.start)}`}, so there was no cover on that date and there is no claim to register. Say this kindly and clearly. Do not ask more questions about the loss and do not offer to register it. ${after ? 'If they want cover again, they can apply for a new policy in the Apply tab on this page.' : ''} Give the HDFC ERGO contacts if they want to talk to someone. In chat, end with "Source: Policy schedule (policy period)" and "The policy wording is final."` };
+      }
       // Likely not covered: no surveyor steps or document list (they suggest a payout is coming); an honest offer to register instead.
       if (r.result === 'likely_not_covered') {
         const police = /theft|burglary|riot|malicious/.test(r.event);
@@ -612,6 +625,7 @@ export class ClaimsStore extends DurableObject {
         };
       }
       // Kept short: every extra word is re-sent to the model on each later step of the turn.
+      if (today() > me.end) r.notes.push(`The policy period has since ended (${pretty(me.end)}), but this loss happened while it was running, so it can still be claimed; reporting late can affect the claim, so register it soon.`);
       return {
         ok: true, result: r.result, incident_date: r.incident_date, notes: r.notes, what_to_do_now: DO_NOW, documents: documentsFor(r.event),
         say: `This check is complete; answer the customer now, in their language. Say the loss is ${label}${r.reasons.length ? ' because: ' + r.reasons.map(x => `${x.reason} (${x.source})`).join(' ') : '.'} Then: "HDFC ERGO's surveyor makes the final decision." Then the what to do now steps and documents, briefly (short bullets in chat; on a voice call, say the two or three most important), then ask if they want to register the claim; if they say yes, call register_claim at once, without re-verifying or asking them to confirm the details. In chat, end with "Source: ${source}" and "The policy wording is final."`,
@@ -621,6 +635,7 @@ export class ClaimsStore extends DurableObject {
       const given = Object.fromEntries(Object.entries(a).filter(([, v]) => v !== undefined && v !== null && v !== ''));
       a = { ...(session.lastCheck || {}), ...given };
       const r = checkClaim(me, a);
+      if (r.incident_date > me.end || r.incident_date < me.start) return { ok: false, outside_period: true, say: `This loss (${pretty(r.incident_date)}) is outside the policy period (${pretty(me.start)} to ${pretty(me.end)}), so there is no claim to register. Tell them kindly; they can apply for a new policy in the Apply tab.` };
       // The same loss registered twice in one chat (a repeated confirm, or an old Confirm button) keeps its first reference.
       const key = JSON.stringify([me.policy, r.event, r.incident_date, [...r.items].sort()]);
       const dup = session.registered?.key === key && s.claims.find(c => c.reference === session.registered.reference);

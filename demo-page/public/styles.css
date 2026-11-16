@@ -472,3 +472,7 @@ legend { padding: 4px 12px; font-weight: 700; font-size: 14px; color: #fff; back
 #resubmit-note { margin-bottom: 16px; }
 #resubmit-note h3 { margin: 0 0 4px; }
 #resubmit-note p { margin: 0; }
+
+/* The Apply button glows when the assistant points to it */
+.tab.glow { animation: tabglow 1.2s ease-in-out 5; }
+@keyframes tabglow { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); } 50% { box-shadow: 0 0 0 4px rgba(255,255,255,.75); background: rgba(255,255,255,.22); } }
