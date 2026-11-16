@@ -276,7 +276,7 @@ $('#proposal').addEventListener('submit', e => {
   $('#review').innerHTML = `<h2>Check your proposal</h2>${groups.map(([h, lines]) => `<h3>${h}</h3><ul>${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`).join('')}
     <p class="hint">PAN, KYC, ID proof and bank details are submitted directly to HDFC ERGO with the proposal form.</p>
     <div class="submit-box">
-      <p><strong>Next step: send this proposal to HDFC ERGO.</strong> It goes to the HDFC ERGO Desk, where it is approved or declined. This page updates by itself.</p>
+      <p><strong>Next step: send this proposal to HDFC ERGO.</strong> It goes to the HDFC ERGO Desk, where it is approved or declined. This page updates by itself. You can also ask the assistant: <em>"Submit my proposal"</em>.</p>
       <button type="button" id="submit-proposal" class="primary big">Submit to HDFC ERGO (demo)</button>
     </div>
     <div id="proposal-status" class="card" hidden></div>
@@ -284,6 +284,7 @@ $('#proposal').addEventListener('submit', e => {
     <p id="download-msg" class="hint" role="status"></p>
     <p class="hint">The download is HDFC ERGO's own proposal form with your answers written in, plus an annexure page. Check it, complete PAN, KYC and bank details, and sign.</p>`;
   $('#review').hidden = false; $('#proposal').hidden = true; $('#new-application').hidden = false;
+  saveDraft();
   $('#review').scrollIntoView({ behavior: 'smooth' });
 });
 
@@ -303,7 +304,7 @@ $('#review').addEventListener('click', e => {
 
 // A blank form for the next applicant (the previous proposal stays on the Desk).
 function newApplication() {
-  clearTimeout(proposalTimer);
+  clearTimeout(proposalTimer); clearTimeout(draftTimer); draftId = null;
   [...chosen].forEach(id => setChosen(id, false));
   renderForm();
   summaryText = ''; lastForm = lastGroups = undefined;
@@ -313,8 +314,9 @@ function newApplication() {
 $('#new-application').addEventListener('click', newApplication);
 
 // ---------- Demo submission: the proposal goes to the HDFC ERGO Desk, where approving it issues a policy ----------
-let proposalTimer;
-async function submitProposal(btn) {
+let proposalTimer, draftTimer, draftId, shownRef;
+// What a proposal sends to HDFC ERGO (used for Submit and for the draft the chat can submit).
+function proposalBody() {
   const f = lastForm, g = k => f.get(k) || '';
   // A section's answer found by its question label (a list for tick-box questions).
   const answer = (id, label, many) => {
@@ -327,18 +329,51 @@ async function submitProposal(btn) {
     const i = s.questions.findIndex(([l, t], i) => t === 'number' && l.includes('₹') && !/^If /.test(l) && Number(f.get(`s_${s.id}_${i}`)));
     sections[s.id.toUpperCase()] = i < 0 ? 0 : Number(f.get(`s_${s.id}_${i}`));
   });
-  btn.disabled = true;
-  const r = await fetch('/api/proposals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+  return {
     name: g('name'), mobile: g('mobile'), business: g('industry'), city: g('address').split(',').pop().trim(), kind: g('kind'),
     addons: f.getAll('perils_extra').map(a => /storm/i.test(a) ? 'storm_flood' : 'earthquake'), sections, start: g('start'), tenure: g('tenure'),
     jewelleryInsured: chosen.has('ii') && answer('ii', /jewellery/i) === 'Yes', theftExtension: chosen.has('ii') && answer('ii', /^Add-ons/, true).includes('Theft extension'),
     form: lastGroups,
-  }) }).catch(() => null);
+  };
+}
+
+async function submitProposal(btn) {
+  btn.disabled = true;
+  const r = await fetch('/api/proposals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(proposalBody()) }).catch(() => null);
   if (!r?.ok) { btn.disabled = false; $('#download-msg').textContent = 'The proposal could not be submitted. Check the mobile number and try again.'; return; }
-  btn.textContent = 'Submitted to HDFC ERGO';
+  const p = await r.json();
+  // Tell the draft, so the chat knows this one was already submitted.
+  if (draftId) fetch(`/api/drafts/${draftId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference: p.reference }) }).catch(() => {});
+  markSubmitted(p);
+}
+
+function markSubmitted(p) {
+  shownRef = p.reference;
+  const btn = $('#submit-proposal');
+  btn.disabled = true; btn.textContent = 'Submitted to HDFC ERGO';
   $('#download-msg').textContent = '';
   $('#edit-wrap').hidden = true;
-  showProposal(await r.json());
+  showProposal(p);
+}
+
+// Save the reviewed proposal so the assistant can submit it, and follow it: if the chat submits it, this page updates.
+async function saveDraft() {
+  clearTimeout(draftTimer); draftId = null; shownRef = null;
+  const r = await fetch('/api/drafts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(proposalBody()) }).catch(() => null);
+  if (!r?.ok) return;
+  draftId = (await r.json()).id;
+  watchDraft(draftId);
+}
+function watchDraft(id) {
+  draftTimer = setTimeout(async () => {
+    if (id !== draftId || $('#review').hidden) return;
+    const d = await fetch(`/api/drafts/${id}`).then(r => r.json()).catch(() => null);
+    if (d?.reference && d.reference !== shownRef) {
+      const p = await fetch(`/api/proposals/${d.reference}`).then(r => r.json()).catch(() => null);
+      if (p?.reference) { markSubmitted(p); toast('Submitted through the assistant: ' + p.reference); }
+    }
+    watchDraft(id);
+  }, 4000);
 }
 
 // The three steps a proposal goes through, with the ones done ticked.

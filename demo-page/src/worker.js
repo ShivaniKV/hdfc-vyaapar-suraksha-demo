@@ -234,6 +234,11 @@ const TOOLS = [
     input_schema: { type: 'object', properties: { claim_reference: { type: 'string', description: 'Optional, e.g. CLM-2026-0412' } } },
   },
   {
+    name: 'submit_proposal',
+    description: 'Submit to HDFC ERGO a proposal the customer filled and reviewed in the Apply tab (or submit again one that was not accepted). No OTP needed. First call it with their name and the mobile on the proposal to get a one-line summary; read it back and ask if they want it submitted. Only after a clear yes, call it again with confirm true.',
+    input_schema: { type: 'object', properties: { name: { type: 'string', description: 'Name on the proposal' }, mobile: { type: 'string', description: 'Mobile on the proposal' }, confirm: { type: 'boolean', description: 'true only after the customer clearly said yes to submitting' } }, required: ['name', 'mobile'] },
+  },
+  {
     name: 'request_callback',
     description: 'Ask an HDFC ERGO claims officer to call the customer back. Call this when the customer asks to speak to a person.',
     input_schema: { type: 'object', properties: { reason: { type: 'string', description: 'Why they want a call, in English' } }, required: ['reason'] },
@@ -319,6 +324,7 @@ export class ClaimsStore extends DurableObject {
   async state() {
     const s = (await this.ctx.storage.get('state')) || { claims: [], callbacks: [], sessions: {}, next: 412 };
     s.proposals ||= [];
+    s.drafts ||= [];
     s.people = (await this.ctx.storage.get('people')) || { list: [], next: 10004 };
     return s;
   }
@@ -326,6 +332,13 @@ export class ClaimsStore extends DurableObject {
     const { people, ...rest } = s;
     return this.ctx.storage.put({ state: rest, people });
   }
+  newProposal(s, p) {
+    const reference = `PRP-2026-${String(101 + s.proposals.length).padStart(4, '0')}`;
+    const { id, at, reference: _r, ...fields } = p;
+    s.proposals.unshift({ reference, ...fields, status: 'Proposal received', at: new Date().toISOString(), via: id ? 'chat' : 'apply' });
+    return reference;
+  }
+
   // Issue a policy number and keep the person in the people store.
   addPerson(s, p, source) {
     const policy = `VS-${p.start.slice(0, 4)}-${s.people.next++}`;
@@ -382,12 +395,29 @@ export class ClaimsStore extends DurableObject {
       await this.save(s);
       return json({ ok: true });
     }
+    // A proposal reviewed on the Apply tab but not yet submitted; the chat can submit it (submit_proposal).
+    if (url.pathname === '/api/drafts' && request.method === 'POST') {
+      const p = readProposal(await request.json().catch(() => ({})));
+      if (!p) return json({ error: 'A name and a 10-digit mobile are needed' }, 400);
+      const s = await this.state();
+      const id = crypto.randomUUID().slice(0, 8);
+      s.drafts = [{ id, ...p, at: new Date().toISOString() }, ...s.drafts.filter(d => d.mobile !== p.mobile)].slice(0, 30);
+      await this.save(s);
+      return json({ id });
+    }
+    const dr = url.pathname.match(/^\/api\/drafts\/([\w-]+)$/);
+    if (dr) {
+      const s = await this.state();
+      const d = s.drafts.find(x => x.id === dr[1]);
+      if (!d) return json({ error: 'No such draft' }, 404);
+      if (request.method === 'GET') return json({ id: d.id, reference: d.reference || null });
+      if (request.method === 'POST') { d.reference = String((await request.json().catch(() => ({}))).reference || '').slice(0, 20) || null; await this.save(s); return json({ ok: true }); }
+    }
     if (url.pathname === '/api/proposals' && request.method === 'POST') {
       const p = readProposal(await request.json().catch(() => ({})));
       if (!p) return json({ error: 'A name and a 10-digit mobile are needed' }, 400);
       const s = await this.state();
-      const reference = `PRP-2026-${String(101 + s.proposals.length).padStart(4, '0')}`;
-      s.proposals.unshift({ reference, ...p, status: 'Proposal received', at: new Date().toISOString() });
+      this.newProposal(s, p);
       await this.save(s);
       return json(s.proposals[0]);
     }
@@ -493,6 +523,20 @@ export class ClaimsStore extends DurableObject {
       await this.save(s);
       const c = findCustomer(session.verified, s);
       return { ok: true, first_name: c.name.split(' ')[0], business: c.business, say: 'Verified. Greet them by first name and continue with what they asked.' };
+    }
+    if (name === 'submit_proposal') {
+      const mobile = digitsOf(a.mobile).slice(-10);
+      const d = String(a.name || '').trim() && s.drafts.find(x => x.mobile === mobile && nameMatches(a.name, x.name));
+      if (!d) return { ok: false, say: 'There is no reviewed proposal for that name and mobile. Ask them to fill the Apply tab and click "Review my proposal" first, then ask you again. Do not collect the form in chat.' };
+      const last = d.reference && s.proposals.find(x => x.reference === d.reference);
+      if (last && last.status !== 'Not accepted') return { ok: false, already_submitted: true, reference: last.reference, status: last.status, say: `This proposal was already submitted as ${last.reference}; its status is "${last.status}". Tell them; it shows in the Apply tab. Do not submit again.` };
+      const sections = Object.entries(d.sections).map(([k, v]) => `Section ${k}${v ? ' ' + rupees(v) : ''}`).join(', ');
+      const summary = `${d.name}, mobile ${d.mobile}, ${d.kind}${d.addons.length ? ' with ' + d.addons.map(x => x === 'storm_flood' ? 'storm and flood' : 'earthquake').join(' and ') : ''}, ${sections}, ${d.years} year${d.years > 1 ? 's' : ''}${last ? ' (submitting again after it was not accepted)' : ''}`;
+      if (a.confirm !== true) return { ok: true, needs_confirmation: true, summary, say: 'Read this summary back in one line and ask if they want it submitted to HDFC ERGO now. Only if they clearly say yes, call submit_proposal again with the same name and mobile and confirm true.' };
+      const reference = this.newProposal(s, d);
+      d.reference = reference;
+      await this.save(s);
+      return { ok: true, reference, say: `Submitted to HDFC ERGO as ${reference}. Tell them: HDFC ERGO will approve or decline it; once approved, the policy is issued only after the premium is received, and there is no cover until then. The status shows in the Apply tab. PAN, KYC and bank details go directly to HDFC ERGO.` };
     }
     if (!me) return needVerified;
 
