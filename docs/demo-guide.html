@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Vyaapar Suraksha Demo Sheet</title>
+<title>Vyaapar Suraksha Demo Script</title>
 <style>
   @page { size: A4; margin: 12mm; }
-  :root { --ink:#16203a; --muted:#5b6475; --line:#dde1e8; --navy:#0f1f45; --red:#c8102e; --soft:#f4f6fa; --green:#1a7f37; --gbg:#e6f4ea; --amber:#8a5a00; --abg:#fff4dc; }
+  :root { --ink:#16203a; --muted:#5b6475; --line:#dde1e8; --navy:#0f1f45; --red:#c8102e; --soft:#f4f6fa; --green:#1a7f37; --gbg:#e6f4ea; --amber:#8a5a00; --abg:#fff4dc; --blue:#1a3d8f; --bbg:#e8f0fe; }
   * { box-sizing: border-box; }
   body { font: 15px/1.5 "Segoe UI", "Nirmala UI", Arial, sans-serif; color: var(--ink); background: #fff; margin: 0; }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
   header { background: var(--navy); color: #fff; border-radius: 12px; padding: 20px 22px; margin-bottom: 18px; }
   header h1 { margin: 0 0 4px; font-size: 24px; }
   header p { margin: 0; color: #c9d3ea; }
-  h2 { font-size: 18px; margin: 26px 0 8px; padding-bottom: 4px; border-bottom: 3px solid var(--red); break-after: avoid; }
+  h2 { font-size: 19px; margin: 28px 0 8px; padding-bottom: 4px; border-bottom: 3px solid var(--red); break-after: avoid; }
   p { margin: 0 0 8px; }
   ul, ol { margin: 0 0 8px; padding-left: 22px; }
   li { margin-bottom: 4px; }
@@ -21,16 +21,19 @@
   th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
   th { background: var(--soft); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
   tr { break-inside: avoid; }
-  code, .t { font-family: Consolas, monospace; font-size: 13.5px; background: var(--soft); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; }
-  code { white-space: nowrap; }
-  .t { display: block; margin: 4px 0 6px; padding: 6px 10px; white-space: pre-wrap; }
+  code { font-family: Consolas, monospace; font-size: 13.5px; background: var(--soft); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; white-space: nowrap; }
+  .say { display: block; margin: 4px 0 6px; padding: 7px 11px; font-family: Consolas, monospace; font-size: 13.5px; background: var(--soft); border: 1px solid var(--line); border-left: 4px solid var(--navy); border-radius: 5px; white-space: pre-wrap; }
   .muted { color: var(--muted); }
   .step { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px 6px; margin: 10px 0; break-inside: avoid; }
-  .step h3 { margin: 0 0 6px; font-size: 16px; display: flex; gap: 8px; align-items: baseline; }
+  .step h3 { margin: 0 0 6px; font-size: 16px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
   .step h3 .n { background: var(--red); color: #fff; border-radius: 6px; padding: 0 8px; font-size: 13px; }
+  .step h3 .tab { background: var(--bbg); color: var(--blue); border-radius: 6px; padding: 0 8px; font-size: 12px; font-weight: 600; }
   .step h3 .time { margin-left: auto; font-weight: 400; color: var(--muted); font-size: 13px; }
+  .expect { border-left: 4px solid var(--blue); background: var(--bbg); padding: 6px 10px; margin: 6px 0 8px; }
   .point { border-left: 4px solid var(--green); background: var(--gbg); padding: 6px 10px; margin: 6px 0 8px; }
   .note { border-left: 4px solid var(--amber); background: var(--abg); padding: 6px 10px; margin: 6px 0 8px; }
+  .yes { color: var(--green); font-weight: 600; }
+  .no { color: var(--red); font-weight: 600; }
   .check li { list-style: "☐  "; }
   @media print { .wrap { padding: 0; } header { -webkit-print-color-adjust: exact; print-color-adjust: exact; } body { font-size: 13px; } }
 </style>
@@ -39,111 +42,192 @@
 <div class="wrap">
 
 <header>
-  <h1>Vyaapar Suraksha Assistant: Demo Sheet</h1>
-  <p>About 20 minutes. Site: hdfc-vs-demo.skillmine-hr-api.workers.dev · All customers and data are made up.</p>
+  <h1>Vyaapar Suraksha Assistant: Demo Script</h1>
+  <p>About 30 minutes · Site: hdfc-vs-demo.skillmine-hr-api.workers.dev · All customers and data are made up</p>
 </header>
 
 <h2>Before you start (10 minutes)</h2>
 <ul class="check">
-  <li>Open the site in Chrome at 100% zoom. Click <b>Reset demo</b> (top right). The Desk should show 0 claims.</li>
-  <li>Open a second tab on the same site, on the <b>HDFC ERGO Desk</b> tab.</li>
-  <li>Send one warm-up question in the chat (<i>What is Section I?</i>), then click <b>New chat</b> (top of the chat).</li>
-  <li>For voice: earphones with a mic, Chrome mic allowed, room quiet.</li>
-  <li>In Perfox (once): agent Published, Rich replies = <b>Text only</b>, reply length raised, credits available.</li>
+  <li>Perfox: the latest <b>Common</b> and <b>Web Voice</b> prompts are pasted (clear each box first), <b>tools refreshed</b>, agent Published, Rich replies = Text only, credits available.</li>
+  <li>Open the site in Chrome at 100% zoom. Click <b>Reset demo</b> (top right). People shows only Ramesh, Sunita, Imran and Priya; the Desk shows 0 claims and 0 proposals.</li>
+  <li>Open a <b>second tab</b> on the same site and click <b>HDFC ERGO Desk</b>. Keep it for the "HDFC ERGO side".</li>
+  <li>Send one warm-up question in the chat (<i>What is Section I?</i>), then click <b>New chat</b> (icon at the top of the chat).</li>
+  <li>For voice: earphones with a mic, Chrome mic allowed, quiet room.</li>
 </ul>
 
-<h2>Logins</h2>
+<h2>The people</h2>
 <table>
-  <tr><th>Person</th><th>Policy</th><th>Mobile</th><th>What they bought</th></tr>
-  <tr><td><b>Ramesh Jain</b><br>Jewellery shop, Jaipur</td><td><code>VS-2026-10001</code></td><td><code>9829000001</code></td><td>All Risk; jewellery insured; Theft Extension</td></tr>
-  <tr><td><b>Sunita Sharma</b><br>Kirana store, Patna</td><td><code>VS-2026-10002</code></td><td><code>9835000002</code></td><td>Named Perils; no flood add-on; jewellery not insured</td></tr>
-  <tr><td><b>Imran Khan</b><br>Electronics, Pune</td><td><code>VS-2025-10003</code></td><td><code>9822000003</code></td><td>Policy ended 30 Sep 2026</td></tr>
+  <tr><th>Person</th><th>Policy · Mobile</th><th>What they bought</th><th>Use them to show</th></tr>
+  <tr><td><b>Ramesh Jain</b><br>Jewellery shop, Jaipur</td><td><code>VS-2026-10001</code><br><code>9829000001</code></td><td>All Risk · Section II with jewellery insured and Theft Extension · Section XI Money</td><td>Everything covered</td></tr>
+  <tr><td><b>Sunita Sharma</b><br>Kirana store, Patna</td><td><code>VS-2026-10002</code><br><code>9835000002</code></td><td>Named Perils, no flood add-on · Section II, jewellery <b>not</b> insured · <b>no</b> Section XI Money</td><td>Same person, yes and no</td></tr>
+  <tr><td><b>Imran Khan</b><br>Electronics, Pune</td><td><code>VS-2025-10003</code><br><code>9822000003</code></td><td>Policy ran 1 Oct 2025 to 30 Sep 2026 (ended)</td><td>Loss after the policy ended</td></tr>
+  <tr><td><b>Kavita Soni</b> (you create her)<br>Jewellery, Indore</td><td>number given on approval<br><code>9000044444</code></td><td>All Risk · Section II with jewellery insured and Theft Extension</td><td>Apply → decline → resubmit → policy → claim</td></tr>
 </table>
-<p>OTP for everyone: <code>123456</code>. The name is required; first name is enough. <b>Copy all</b> on the People page copies name, policy and mobile.</p>
+<p>OTP for everyone: <code>123456</code>. The name is required; the first name is enough. On <b>People</b>, <b>Copy all</b> copies name, policy and mobile, and <b>View filled form</b> shows exactly what they chose.</p>
+<div class="note"><b>PRP-…</b> is a <b>proposal reference</b> (the application). <b>VS-…</b> is a <b>policy number</b>, given only after HDFC ERGO approves the proposal <b>and</b> the premium is received.</div>
 
-<h2>The demo, step by step</h2>
-<p class="muted">Type in your own words; the lines below are examples. Wait for each reply (3 to 15 seconds).</p>
+<h2>Part 1 · It knows the policy (5 min)</h2>
 
 <div class="step">
-  <h3><span class="n">1</span> The problem <span class="time">1 min</span></h3>
-  <p>On Home, say: <i>"21 sections, a 100-page wording. A shopkeeper can't read that, and no agent is awake at 11 pm. This assistant explains, helps them apply and handles the claim, in chat or voice, in English, Hinglish and Hindi."</i></p>
+  <h3><span class="n">1</span> The problem <span class="tab">Home</span> <span class="time">1 min</span></h3>
+  <p>Say: <i>"21 sections and a 100-page wording. A shopkeeper can't read that, and no agent is awake at 11 pm. This assistant explains the policy, helps them apply and handles the claim, in chat or voice, in English, Hinglish and Hindi."</i></p>
 </div>
 
 <div class="step">
-  <h3><span class="n">2</span> It knows the policy <span class="time">3 min</span></h3>
-  <span class="t">What is not covered under burglary? I run a mobile phone shop.</span>
-  <p>Point at the <b>Source</b> line at the end. Open <b>Policy Guide</b> → Section II → <b>Read in the policy</b>: HDFC ERGO's own PDF opens at that place.</p>
+  <h3><span class="n">2</span> A policy question with its source <span class="tab">Chat → Policy Guide</span> <span class="time">2 min</span></h3>
+  <span class="say">What is not covered under burglary? I run a mobile phone shop.</span>
+  <div class="expect">Answers only the exclusions that matter to a phone shop and ends with a <b>Source</b> line. Click the Source line, or open <b>Policy Guide</b> → Section II → <b>Read in the policy</b>: HDFC ERGO's own PDF opens at that page.</div>
   <div class="point">Every answer traces back to a page in HDFC ERGO's own documents.</div>
 </div>
 
 <div class="step">
-  <h3><span class="n">3</span> Their language, and no selling <span class="time">2 min</span></h3>
-  <span class="t">मेरी किराने की दुकान है। बाढ़ से स्टॉक खराब हो जाए तो क्या कवर मिलेगा?</span>
+  <h3><span class="n">3</span> Their language, and no selling <span class="tab">Chat</span> <span class="time">2 min</span></h3>
+  <span class="say">मेरी किराने की दुकान है। बाढ़ से स्टॉक खराब हो जाए तो क्या कवर मिलेगा?</span>
   <p>It answers in Hindi. Then in Hinglish:</p>
-  <span class="t">Mujhe kaunsa section lena chahiye? Aap hi bata do best kya hai</span>
+  <span class="say">Mujhe kaunsa section lena chahiye? Aap hi bata do best kya hai</span>
   <div class="point">It explains the options but won't choose for the customer. No mis-selling.</div>
 </div>
 
+<h2>Part 2 · From application to policy, as Kavita (10 min)</h2>
+
 <div class="step">
-  <h3><span class="n">4</span> From question to policy <span class="time">4 min</span></h3>
-  <span class="t">I want to buy this. Should I send my PAN and Aadhaar here?</span>
-  <p>It says not to share them here. Open <b>Apply</b> as Priya: choose Named Perils, tick the storm and flood add-on, fill name and mobile, <b>Review my proposal</b> → <b>Submit to HDFC ERGO (demo)</b> → <b>Open the HDFC ERGO Desk</b>. Or, after Review, type in the chat <i>Submit my proposal. Priya Nair, 9000055555</i>: it reads it back, and on <i>yes</i> submits it and the Apply page updates.</p>
-  <p>On the Desk: <b>Approve proposal</b> → it shows <i>Awaiting premium</i> (no policy, no cover yet) → <b>Mark premium received and issue policy</b>. Back on Apply the steps tick through by themselves and show the policy number. On <b>People</b>, Priya now has a card with <b>Copy all</b>; paste it in the chat and a flood claim comes back <b>likely covered</b>, because she ticked the add-on.</p>
-  <p><b>To show a decline:</b> click <b>Decline</b> instead. Apply shows <b>Edit and resubmit</b>. In the chat, <i>Resubmit my application</i>: it asks whether to change anything first and opens the form with the old answers. Change a value, <b>Review</b>, submit; the Desk shows <i>Resubmission of PRP-… · changed: …</i>.</p>
+  <h3><span class="n">4</span> Privacy first <span class="tab">Chat</span> <span class="time">½ min</span></h3>
+  <span class="say">I want to buy this. Should I send my PAN and Aadhaar here?</span>
+  <div class="expect">It says not to share them here; they go directly to HDFC ERGO with the proposal.</div>
+</div>
+
+<div class="step">
+  <h3><span class="n">5</span> Fill and submit the proposal <span class="tab">Apply</span> <span class="time">2 min</span></h3>
+  <ul>
+    <li><b>About you:</b> Kavita Soni · <code>9000044444</code> · any address, PIN, email · Self employed · Industry <b>Jewellery</b> · <b>1 year</b> · start date <b>today</b>.</li>
+    <li><b>Section I:</b> <b>All Risk</b> · Finished stock <code>1000000</code> · Locations <code>1</code>.</li>
+    <li>Tick <b>II Burglary</b>: sum insured <code>2000000</code>, Market value, CCTV Yes, grills Yes, jewellery specifically insured <b>Yes</b> (<code>2000000</code>), tick <b>Theft extension</b>.</li>
+    <li>Tick the declaration → <b>Review my proposal</b>.</li>
+  </ul>
+  <p>Now submit it <b>from the chat</b>:</p>
+  <span class="say">Submit my proposal. Kavita Soni, 9000044444</span>
+  <div class="expect">It reads the proposal back in one line and asks to confirm. Say <i>Yes</i> → it gives a reference like <b>PRP-2026-0101</b>, and the Apply page switches to "Submitted" by itself. (The red <b>Submit to HDFC ERGO</b> button on Apply does the same.)</div>
+  <div class="point">From question to submitted proposal without leaving the chat, and nothing is sent without a clear yes.</div>
+</div>
+
+<div class="step">
+  <h3><span class="n">6</span> HDFC ERGO declines it <span class="tab">Desk → Apply</span> <span class="time">1 min</span></h3>
+  <p>On the Desk tab, on Kavita's proposal, click <b>Decline</b>. Go back to <b>Apply</b> (don't reload it): it shows <b>Not accepted</b> and the button now says <b>Edit and resubmit</b>.</p>
+</div>
+
+<div class="step">
+  <h3><span class="n">7</span> Resubmit, with changes <span class="tab">Chat + Apply</span> <span class="time">2 min</span></h3>
+  <span class="say">Resubmit my application. Kavita Soni, 9000044444</span>
+  <div class="expect">It says HDFC ERGO didn't accept it as it was and asks whether she wants to change anything first.</div>
+  <span class="say">Yes, I want to increase my stock value</span>
+  <div class="expect">The Apply page opens the form by itself with all her old answers: <i>"The assistant opened your proposal for changes."</i></div>
+  <p>Change Finished stock to <code>1500000</code> → <b>Review my proposal</b>. Then in the chat:</p>
+  <span class="say">Submit it now</span>
+  <div class="expect">The read-back names the change (<i>"resubmitting PRP-2026-0101 with changes: Section I value"</i>). Say <i>Yes</i> → new reference <b>PRP-2026-0102</b>. On the Desk it shows <b>Resubmission of PRP-2026-0101 · changed: Section I value</b>.</div>
+  <div class="point">Sending back the same declined proposal is pointless, so it asks for changes first, and HDFC ERGO sees exactly what changed.</div>
+</div>
+
+<div class="step">
+  <h3><span class="n">8</span> Approved, but no premium yet <span class="tab">Desk + Chat</span> <span class="time">1½ min</span></h3>
+  <p>On the Desk, on the <b>top</b> card (newest), click <b>Approve proposal</b>: it shows <i>Awaiting premium</i>. In the chat:</p>
+  <span class="say">Is my policy approved? Kavita Soni, 9000044444</span>
+  <div class="expect">Approved, but no policy and <b>no cover until the premium is received</b>.</div>
+</div>
+
+<div class="step">
+  <h3><span class="n">9</span> Premium received: policy issued <span class="tab">Desk → Apply → People</span> <span class="time">1½ min</span></h3>
+  <p>On the Desk: <b>Mark premium received and issue policy</b> → <b>Policy issued · VS-2026-…</b>. Apply ticks through all three steps. On <b>People</b>, Kavita now has a card: click <b>Copy all</b>.</p>
+  <span class="say">Is my policy approved? Kavita Soni, 9000044444</span>
+  <div class="expect">Accepted, premium received, policy issued; the number is in the Apply tab.</div>
   <div class="point">Like the real process: accepted, premium received, then the policy. No premium, no cover.</div>
 </div>
 
+<h2>Part 3 · The claim (8 min)</h2>
+
 <div class="step">
-  <h3><span class="n">5</span> The claim at 11 pm (main moment) <span class="time">5 min</span></h3>
-  <p>On People, open Ramesh's <b>View filled form</b>. Click <b>New chat</b>, then as Ramesh:</p>
-  <span class="t">My jewellery shop was broken into last night. Gold worth about 3 lakh was stolen.</span>
-  <p>It checks everyone is safe and asks for name, policy and mobile. Give <b>Ramesh Jain, VS-2026-10001, 9829000001</b>, then OTP <b>123456</b>.</p>
-  <p>It says <b>likely covered</b> (his form has jewellery insured), that the surveyor decides, what to do now and which documents. Say <i>Yes, register it</i> → it gives a reference like <b>CLM-2026-0412</b>.</p>
-  <p>On the <b>Desk</b>: the claim is there with the value and his words. Change status to <b>Surveyor assigned</b>. Back in the chat: <i>What is the status of my claim?</i></p>
-  <div class="point">Customer and HDFC ERGO see the same data, live.</div>
+  <h3><span class="n">10</span> Likely covered <span class="tab">Chat</span> <span class="time">3 min</span></h3>
+  <p><b>New chat</b>, paste Kavita's Copy all, then:</p>
+  <span class="say">Someone broke the lock of my jewellery shop this morning and took gold ornaments worth about 5 lakh from the display. Everyone is safe. Will my insurance cover this? Kavita Soni, VS-2026-…, 9000044444</span>
+  <p>OTP <code>123456</code>.</p>
+  <div class="expect"><span class="yes">Likely covered</span> (she insured her gold specifically), "HDFC ERGO's surveyor makes the final decision", what to do now and the documents. Say <i>Yes, register it</i> → a reference like <b>CLM-2026-0412</b>.</div>
+  <div class="note">Say <b>"this morning"</b>, not "last night": her policy starts today, so a loss last night is before her cover began.</div>
 </div>
 
 <div class="step">
-  <h3><span class="n">6</span> Honest when the answer is no <span class="time">2 min</span></h3>
-  <p><b>New chat</b>, as Sunita (Sunita Sharma, VS-2026-10002, 9835000002, OTP 123456). Tell the same story: jewellery stolen in a break-in.</p>
-  <p>This time: <b>likely not covered</b>, because her form says jewellery is not insured. It gives only two steps (police FIR, keep photos) and honestly offers to register it for HDFC ERGO to review; the documents list comes only if she says yes.</p>
-  <div class="point">Same words, different answer: it reads what each customer actually bought. It never says approved or rejected, and never promises an amount.</div>
+  <h3><span class="n">11</span> HDFC ERGO updates it, the customer sees it <span class="tab">Desk + Chat</span> <span class="time">2 min</span></h3>
+  <p>On the Desk, the claim shows with her words and the value. Set status to <b>Surveyor assigned</b>. In the chat:</p>
+  <span class="say">What is the status of my claim?</span>
+  <p>Then set it to <b>Closed – not payable</b> and ask again.</p>
+  <div class="expect">It reports each status and next step. For "Closed – not payable": HDFC ERGO has decided it is not payable and will write with the reason.</div>
+  <div class="point">Customer and HDFC ERGO see the same data, live. The assistant only ever says "likely"; the decision is HDFC ERGO's.</div>
 </div>
 
 <div class="step">
-  <h3><span class="n">7</span> Talk to it <span class="time">3 min</span></h3>
-  <p>Click the <b>headset</b> button in the chat. Say in Hinglish: <i>"Namaste, meri dukaan mein kal raat chori ho gayi."</i> Give name, then policy and mobile digit by digit ("double zero" works). OTP: "one two three four five six" or "ek do teen char paanch chhe".</p>
-  <div class="note">Speak a beat after it finishes. If it hears nothing, stop the call, check the mic, start again. Or switch back to chat.</div>
+  <h3><span class="n">12</span> Same person, what she bought and what she didn't <span class="tab">People + Chat</span> <span class="time">3 min</span></h3>
+  <p>On <b>People</b>, open Sunita's <b>View filled form</b>: burglary taken; no Money section; no flood add-on. <b>New chat</b>, send <b>one loss per message</b>:</p>
+  <span class="say">Hi, someone broke into my kirana shop last night. They broke the shutter lock and took rice bags and oil tins from the shelves. Nobody was hurt. Will insurance pay for this? I'm Sunita Sharma, policy VS-2026-10002, mobile 9835000002</span>
+  <p>OTP <code>123456</code> → <span class="yes">likely covered</span> (Section II taken). Then:</p>
+  <span class="say">Oh and they also opened the cash drawer and took around 40 thousand rupees. Is that covered too?</span>
+  <p>→ <span class="no">likely not covered</span>: cash needs Section XI Money, which she didn't take. Then:</p>
+  <span class="say">One more thing, two days ago heavy rain water came inside my shop and spoiled the flour and sugar stock. Can I claim for that?</span>
+  <p>→ <span class="no">likely not covered</span>: Named Perils needs the storm and flood add-on.</p>
+  <div class="expect">For a "likely not covered" it gives only two steps (police FIR, keep photos) and honestly offers to register it for HDFC ERGO to review; the documents list comes only if she says yes.</div>
+  <div class="point">Same shopkeeper, three losses, three honest answers, each from what she actually ticked. (Optional: the same flood or cash message as Ramesh comes back <span class="yes">likely covered</span>.)</div>
 </div>
 
 <div class="step">
-  <h3><span class="n">8</span> Let them try (optional) <span class="time">2 min</span></h3>
-  <p>On People, <b>+ Add a person</b>: let someone in the room pick a name, any mobile, status, and whether jewellery and Theft Extension are included. They report any loss they like; the answer follows what they ticked.</p>
+  <h3><span class="n">13</span> A loss after the policy ended <span class="tab">Chat</span> <span class="time">1½ min</span></h3>
+  <p><b>New chat</b>:</p>
+  <span class="say">My shop was robbed on 1 October 2026 and stock was stolen. Imran Khan, VS-2025-10003, 9822000003</span>
+  <p>OTP <code>123456</code>.</p>
+  <div class="expect">Policy ran 1 Oct 2025 to 30 Sep 2026 and has ended, so the loss on 1 October 2026 is <span class="no">not covered</span> and there is <b>nothing to register</b>; he can apply for a new policy in the Apply tab (the Apply button in the top menu glows).</div>
+  <div class="note">Give the date in the first message. If you only report "a robbery", the model sometimes asks extra questions before checking.</div>
 </div>
+
+<h2>Part 4 · Voice and hands-on (5 min)</h2>
+
+<div class="step">
+  <h3><span class="n">14</span> Talk to it <span class="tab">Chat → headset</span> <span class="time">3 min</span></h3>
+  <p>Click the <b>headset</b> button. Say in Hinglish: <i>"Namaste, meri dukaan mein kal raat chori ho gayi."</i> Give the name, then policy and mobile digit by digit ("double zero" works). OTP: "one two three four five six" or "ek do teen char paanch chhe".</p>
+  <div class="note">Speak a beat after it finishes. If it hears nothing, stop the call, check the mic, start again, or switch back to chat.</div>
+</div>
+
+<div class="step">
+  <h3><span class="n">15</span> Let them try (optional) <span class="tab">People</span> <span class="time">2 min</span></h3>
+  <p><b>+ Add a person</b>: someone in the room picks a name, any mobile, the sections and add-ons. They report any loss they like; the answer follows what they ticked.</p>
+</div>
+
+<h2>After the demo</h2>
+<p>Click <b>Reset demo</b>. It clears everything added (claims, proposals, issued policies like Kavita, added people) and leaves Ramesh, Sunita, Imran and Priya.</p>
 
 <h2>If something goes wrong</h2>
 <table>
   <tr><th>You see</th><th>Do this</th></tr>
-  <tr><td>Reply stops mid-sentence or makes no sense</td><td>Click <b>New chat</b> and ask again, shorter.</td></tr>
+  <tr><td>"Let me confirm that with our team and come straight back to you."</td><td>Perfox's fallback when the model hiccups. Click <b>New chat</b> and send the whole thing in one message.</td></tr>
+  <tr><td>Kavita's theft comes back "not covered"</td><td>You said "last night"; her cover starts today. Say "this morning".</td></tr>
+  <tr><td>Stock and cash together come back "not covered"</td><td>Send them as separate messages; one uncovered item currently marks the whole loss.</td></tr>
   <tr><td>"No policy matches"</td><td>Use <b>Copy all</b> on the People card and paste it.</td></tr>
   <tr><td>"The name does not match"</td><td>Give the name on the card. It never reveals the right name, by design.</td></tr>
+  <tr><td>Chat "Resubmit" doesn't open the form</td><td>The Apply page was reloaded. Use <b>Edit and resubmit</b> on Apply instead.</td></tr>
+  <tr><td>Two Kavita cards on the Desk</td><td>Use the top one (newest reference); the old one stays as a record.</td></tr>
   <tr><td>It asks for the OTP again</td><td>Type <code>123456</code> again.</td></tr>
+  <tr><td>Want a blank Apply form</td><td>Click <b>＋ New application</b> at the top of Apply.</td></tr>
   <tr><td>Chat doesn't answer</td><td>Reload the page. In Perfox, check the agent is Published and has credits.</td></tr>
-  <tr><td>Desk cluttered from practice</td><td>Click <b>Reset demo</b>. Everything you added goes (claims, proposals, issued policies, added people); Ramesh, Sunita and Imran stay.</td></tr>
 </table>
 
 <h2>If they ask</h2>
 <table>
   <tr><th>Question</th><th>Answer</th></tr>
-  <tr><td>Can it make things up?</td><td>Policy answers come only from HDFC ERGO's four documents, with page references. Whether a claim is likely covered is decided by fixed rules from the policy wording, not by the AI. The AI explains the result.</td></tr>
-  <tr><td>Personal data?</td><td>It never asks for PAN, Aadhaar, KYC or bank details. Policy details are shown only after OTP.</td></tr>
+  <tr><td>Who decides covered or not?</td><td>Fixed rules from the policy wording, applied to what the customer chose on their form (plan type, sections, add-ons, jewellery, Theft Extension, policy dates). The AI explains the result; it doesn't decide.</td></tr>
+  <tr><td>Can it make things up?</td><td>Policy answers come only from HDFC ERGO's four documents, with page references.</td></tr>
   <tr><td>Can it approve a claim?</td><td>No. It says "likely covered" or "likely not covered"; HDFC ERGO's surveyor decides.</td></tr>
+  <tr><td>Personal data?</td><td>It never asks for PAN, Aadhaar, KYC or bank details. Policy details are shown only after OTP.</td></tr>
   <tr><td>How does it connect to our systems?</td><td>Through eight tools (verify, OTP, policy, check claim, register, status, submit proposal, call-back). In production they call HDFC ERGO's policy and claims systems; the assistant stays the same.</td></tr>
   <tr><td>Languages?</td><td>English, Hinglish and Hindi in chat and voice; more Indian languages can be added.</td></tr>
 </table>
 
-<h2>Last checked: 12 Nov 2026</h2>
-<p>89 automated checks pass on the live site. Tested live: Sunita's claim end to end (likely covered, ₹80,000 on the Desk, no cards), wrong name refused, Hinglish and Hindi replies in the right script, PAN not repeated, Apply → Desk approval → new policy on People. Not tested by me: voice (needs a mic).</p>
+<h2>Last checked: 16 Nov 2026</h2>
+<p>120 automated checks pass on the live site. Tested live: Kavita's apply → decline → resubmit with changes → approve → premium → policy → covered claim → Closed – not payable; Sunita's covered and not-covered losses; Imran's ended policy; chat submission and status by name and mobile. Not tested by me: voice (needs a mic). The chat model (Gemini Flash-Lite) is sometimes inconsistent; a stronger model in Perfox would make it steadier.</p>
 
 </div>
 </body>
