@@ -280,16 +280,15 @@ $('#proposal').addEventListener('submit', e => {
       <button type="button" id="submit-proposal" class="primary big">Submit to HDFC ERGO (demo)</button>
     </div>
     <div id="proposal-status" class="card" hidden></div>
-    <p class="other-options">Other options: <button type="button" class="link" id="download-pdf">Download filled proposal form</button> · <button type="button" class="link" id="send-proposal">Send to the assistant</button><span id="edit-wrap"> · <button type="button" class="link" id="edit-proposal">Edit</button></span> · <button type="button" class="link" id="new-proposal">Start a new application</button></p>
+    <p class="other-options">Other options: <button type="button" class="link" id="download-pdf">Download filled proposal form</button> · <button type="button" class="link" id="send-proposal">Send to the assistant</button><span id="edit-wrap"> · <button type="button" class="link" id="edit-proposal">Edit</button></span></p>
     <p id="download-msg" class="hint" role="status"></p>
     <p class="hint">The download is HDFC ERGO's own proposal form with your answers written in, plus an annexure page. Check it, complete PAN, KYC and bank details, and sign.</p>`;
-  $('#review').hidden = false; $('#proposal').hidden = true;
+  $('#review').hidden = false; $('#proposal').hidden = true; $('#new-application').hidden = false;
   $('#review').scrollIntoView({ behavior: 'smooth' });
 });
 
 $('#review').addEventListener('click', e => {
-  if (e.target.id === 'edit-proposal') { $('#review').hidden = true; $('#proposal').hidden = false; }
-  if (e.target.id === 'new-proposal') newApplication();
+  if (e.target.id === 'edit-proposal') { $('#review').hidden = true; $('#proposal').hidden = false; $('#new-application').hidden = true; }
   if (e.target.id === 'send-proposal') sendToChat(summaryText);
   if (e.target.id === 'submit-proposal') submitProposal(e.target);
   if (e.target.dataset.ask) sendToChat(e.target.dataset.ask);
@@ -308,9 +307,10 @@ function newApplication() {
   [...chosen].forEach(id => setChosen(id, false));
   renderForm();
   summaryText = ''; lastForm = lastGroups = undefined;
-  $('#review').hidden = true; $('#review').innerHTML = ''; $('#proposal').hidden = false;
-  $('#proposal').scrollIntoView({ behavior: 'smooth' });
+  $('#review').hidden = true; $('#review').innerHTML = ''; $('#proposal').hidden = false; $('#new-application').hidden = true;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+$('#new-application').addEventListener('click', newApplication);
 
 // ---------- Demo submission: the proposal goes to the HDFC ERGO Desk, where approving it issues a policy ----------
 let proposalTimer;
@@ -358,7 +358,7 @@ function showProposal(p) {
     const later = p.start > new Date().toISOString().slice(0, 10);
     box.innerHTML = `${proposalSteps(p.status)}<h3>Policy issued: ${esc(p.policy)}</h3>
       <p>HDFC ERGO accepted proposal ${esc(p.reference)} and received the premium. You are now a policyholder: registered mobile ${esc(p.mobile)}, demo OTP 123456.${later ? ` Cover starts on ${esc(day(p.start))}; anything that happens before then is not covered.` : ''}</p>
-      <div class="actions"><button type="button" class="primary" data-ask="${esc(ask)}">Ask the assistant about my policy</button><button type="button" data-go="people">See it on People</button><button type="button" id="new-proposal">Apply for someone else</button></div>`;
+      <div class="actions"><button type="button" class="primary" data-ask="${esc(ask)}">Ask the assistant about my policy</button><button type="button" data-go="people">See it on People</button></div>`;
     box.className = 'card status-ok';
     return;
   }
