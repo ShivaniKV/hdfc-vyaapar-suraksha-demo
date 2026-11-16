@@ -815,8 +815,8 @@ $('#desk-claims').addEventListener('change', async e => {
   renderDesk();
 });
 
-// Reset: forget the conversation in this browser, clear claims, call-backs and proposals, and start again from a clean page.
-// People added on the People page stay until removed there.
+// Reset: forget the conversation in this browser, clear claims, call-backs, proposals and added people, and start again from a clean page.
+// Only the three made-up customers remain.
 document.getElementById('reset').addEventListener('click', async () => {
   await fetch('/api/reset', { method: 'POST' }).catch(() => {});
   Perfox('shutdown');

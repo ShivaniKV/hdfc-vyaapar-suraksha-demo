@@ -2,7 +2,7 @@
 // /mcp  : the tools the Perfox agent calls (MCP over HTTP, JSON-RPC 2.0).
 // /api/*: the demo page's People page, HDFC ERGO Desk and Reset.
 // All data is made up. One Durable Object holds the claims, call-backs, OTP checks and proposals (Reset empties these)
-// and the added people (kept until removed on the People page).
+// and the added people (until Reset or removed on the People page).
 
 import { DurableObject } from 'cloudflare:workers';
 
@@ -241,7 +241,7 @@ const TOOLS = [
 ];
 
 const clean = s => String(s || '').replace(/[^0-9a-z]/gi, '').toUpperCase();
-// The three made-up customers plus the people added on the People page or issued from a proposal (kept across Reset).
+// The three made-up customers plus the people added on the People page or issued from a proposal (cleared by Reset).
 const allCustomers = s => [...CUSTOMERS, ...(s.people?.list || [])];
 // Where a policy stands today: not started yet, active, ending within 30 days, or expired.
 function statusOf(c) {
@@ -314,7 +314,7 @@ function readPerson(p) {
 }
 
 // Storage: 'state' holds claims, call-backs, sessions and proposals (Reset clears it);
-// 'people' holds added policyholders and the next policy number (Reset keeps it).
+// 'people' holds added policyholders and the next policy number (Reset clears it).
 export class ClaimsStore extends DurableObject {
   async state() {
     const s = (await this.ctx.storage.get('state')) || { claims: [], callbacks: [], sessions: {}, next: 412 };
@@ -354,13 +354,9 @@ export class ClaimsStore extends DurableObject {
         claims: s.claims, callbacks: s.callbacks, statuses: STATUSES, proposals: s.proposals, today: today(),
       });
     }
-    // Reset clears claims, call-backs, sessions, proposals and the policies issued from them;
-    // people added with "+ Add a person" stay until removed on the People page.
+    // Reset puts the demo back to its start: only the three made-up customers remain.
     if (url.pathname === '/api/reset' && request.method === 'POST') {
-      const people = (await this.ctx.storage.get('people')) || { list: [], next: 10004 };
-      people.list = people.list.filter(c => c.source !== 'proposal');
-      await this.ctx.storage.put('people', people);
-      await this.ctx.storage.delete('state');
+      await this.ctx.storage.delete(['state', 'people']);
       return json({ ok: true });
     }
     if (url.pathname === '/api/people' && request.method === 'POST') {
