@@ -1,8 +1,8 @@
 // Claims back end for the Vyaapar Suraksha demo.
 // /mcp  : the tools the Perfox agent calls (MCP over HTTP, JSON-RPC 2.0).
-// /api/*: the demo page's People page, HDFC ERGO Desk and Reset.
-// All data is made up. One Durable Object holds the claims, call-backs, OTP checks and proposals (Reset empties these)
-// and the added people (until Reset or removed on the People page).
+// /api/*: read-only state (for tests) and Reset (the page opened with ?reset).
+// All data is made up and stands in for HDFC ERGO's own systems. One Durable Object holds the claims,
+// call-backs, application requests and OTP checks; Reset empties them. The three policyholders below never change.
 
 import { DurableObject } from 'cloudflare:workers';
 
@@ -56,14 +56,11 @@ const CUSTOMERS = [
   },
 ];
 const DEMO_OTP = '123456';
-const STATUSES = ['Registered', 'Surveyor assigned', 'Under review', 'Settled', 'Closed – not payable'];
-const NEXT_STEP = {
-  'Registered': 'HDFC ERGO will assign a surveyor, who will contact the customer to inspect the loss.',
-  'Surveyor assigned': 'The surveyor will call to fix a visit. Keep the damaged items, photos and bills ready.',
-  'Under review': 'HDFC ERGO is reviewing the surveyor\'s report and documents, and may ask for more information.',
-  'Settled': 'The claim has been settled. HDFC ERGO will share the settlement details.',
-  'Closed – not payable': 'HDFC ERGO has decided the loss is not payable under the policy and will write with the reason.',
-};
+// Who takes a registered claim from here (HDFC ERGO's own team handles everything after registration).
+const HANDLED_BY = mobile => `HDFC ERGO's claims team will call the registered mobile ending ${mobile.slice(-4)} and appoint a surveyor to inspect the loss; the surveyor's report decides the claim.`;
+const CONTACTS = 'HDFC ERGO: 022 6158 2020 or 022 6234 6234, WhatsApp 8169 500 500, hdfcergo.com';
+// Someone with a loss but no policy: honest about this loss, helpful about the future.
+const NO_POLICY = 'If they have no Vyaapar Suraksha policy, say kindly that there is no claim to make for this loss, and that a policy bought now cannot cover a loss that has already happened. Then say Vyaapar Suraksha can protect the business from losses like this from now on, and offer to explain what it covers or to have HDFC ERGO call them to apply (request_application).';
 const SECTION_NAMES = {
   I: 'Property Damage', II: 'Burglary and House Breaking', III: 'Breakdown of Electrical and Mechanical Appliance',
   IV: 'Electronic Equipment', V: 'Portable Electronic Equipment', VI: 'Boiler and Pressure Plant', VII: 'Business Interruption',
@@ -178,8 +175,8 @@ const DO_NOW = [
 const TOOLS = [
   {
     name: 'start_verification',
-    description: 'Start verifying an existing policyholder. Call this when the customer says they already have a Vyaapar Suraksha policy and wants help with their own policy or claim, once they have given their name, policy number and registered mobile number. Checks the name against the policy and sends a one-time password (OTP) to their mobile. If they applied but have no policy number yet, call it with just their name and mobile to learn where their proposal stands.',
-    input_schema: { type: 'object', properties: { name: { type: 'string', description: 'The name the customer gave' }, policy_number: { type: 'string', description: 'e.g. VS-2026-10001' }, mobile: { type: 'string', description: 'Registered mobile number' } }, required: ['mobile'] },
+    description: 'Start verifying an existing policyholder. Call this when the customer says they already have a Vyaapar Suraksha policy and wants help with their own policy or claim, once they have given their name, policy number and registered mobile number. Checks the name against the policy and sends a one-time password (OTP) to their mobile. Do not call it if they say they have no policy.',
+    input_schema: { type: 'object', properties: { name: { type: 'string', description: 'The name the customer gave' }, policy_number: { type: 'string', description: 'e.g. VS-2026-10001' }, mobile: { type: 'string', description: 'Registered mobile number' } }, required: ['policy_number', 'mobile'] },
   },
   {
     name: 'verify_otp',
@@ -234,20 +231,19 @@ const TOOLS = [
     input_schema: { type: 'object', properties: { claim_reference: { type: 'string', description: 'Optional, e.g. CLM-2026-0412' } } },
   },
   {
-    name: 'submit_proposal',
-    description: 'Submit to HDFC ERGO a proposal the customer filled and reviewed in the Apply tab (or submit again one that was not accepted). No OTP needed. First call it with their name and the mobile on the proposal to get a one-line summary; read it back and ask if they want it submitted. Only after a clear yes, call it again with confirm true. If it was declined before, follow what it says: ask about changes first.',
-    input_schema: { type: 'object', properties: { name: { type: 'string', description: 'Name on the proposal' }, mobile: { type: 'string', description: 'Mobile on the proposal' }, confirm: { type: 'boolean', description: 'true only after the customer clearly said yes to submitting' }, edit: { type: 'boolean', description: 'true to open their form in the Apply tab for changes' }, unchanged: { type: 'boolean', description: 'true only if they insist on resubmitting a declined proposal without changes' } }, required: ['name', 'mobile'] },
+    name: 'request_application',
+    description: 'Pass a request to buy Vyaapar Suraksha to HDFC ERGO, who will call the customer to complete the application. No OTP needed. Call it once you have their name, mobile, type of business and city. It returns a one-line summary: read it back, and only after a clear yes call it again with confirm true. Never collect PAN, Aadhaar, KYC or bank details.',
+    input_schema: { type: 'object', properties: { name: { type: 'string' }, mobile: { type: 'string', description: '10-digit mobile' }, business: { type: 'string', description: 'Type of business, e.g. kirana store' }, city: { type: 'string' }, interest: { type: 'string', description: 'Optional: sections or risks they asked about, in English' }, confirm: { type: 'boolean', description: 'true only after the customer clearly said yes' } }, required: ['name', 'mobile', 'business', 'city'] },
   },
   {
     name: 'request_callback',
-    description: 'Ask an HDFC ERGO claims officer to call the customer back. Call this when the customer asks to speak to a person.',
-    input_schema: { type: 'object', properties: { reason: { type: 'string', description: 'Why they want a call, in English' } }, required: ['reason'] },
+    description: 'Ask HDFC ERGO to call the customer back. Call this when the customer asks to speak to a person. A verified policyholder needs only the reason; anyone else also needs their name and mobile.',
+    input_schema: { type: 'object', properties: { reason: { type: 'string', description: 'Why they want a call, in English' }, name: { type: 'string', description: 'Only if not a verified policyholder' }, mobile: { type: 'string', description: 'Only if not a verified policyholder' } }, required: ['reason'] },
   },
 ];
 
 const clean = s => String(s || '').replace(/[^0-9a-z]/gi, '').toUpperCase();
-// The three made-up customers plus the people added on the People page or issued from a proposal (cleared by Reset).
-const allCustomers = s => [...CUSTOMERS, ...(s.people?.list || [])];
+const allCustomers = () => CUSTOMERS;
 // Where a policy stands today: not started yet, active, ending within 30 days, or expired.
 const pretty = d => new Date(d + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 // What to tell the model about where the policy stands (never the word "expired": Perfox drops such replies).
@@ -261,7 +257,6 @@ function statusOf(c) {
   const t = today();
   return c.start > t ? 'upcoming' : c.end < t ? 'expired' : daysBetween(t, c.end) <= 30 ? 'expiring' : 'active';
 }
-const endFor = (start, years) => addDays(Number(start.slice(0, 4)) + years + start.slice(4), -1);
 // On voice calls numbers can arrive as words ("nine eight two nine…", "double zero", "ek do teen") or Devanagari digits.
 const WORD_DIGITS = {
   zero: 0, oh: 0, o: 0, one: 1, two: 2, to: 2, too: 2, three: 3, four: 4, for: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
@@ -296,95 +291,15 @@ const findCustomer = (policy, s) => {
     || (d.length >= 5 ? all.find(c => c.policy.endsWith(d.slice(-5))) : undefined);
 };
 
-// A proposal sent from the Apply tab, kept to the fields a policy needs.
-function readProposal(p) {
-  const mobile = String(p.mobile || '').replace(/\D/g, '').slice(-10);
-  if (!String(p.name || '').trim() || mobile.length !== 10) return null;
-  const sections = {};
-  for (const [k, v] of Object.entries(p.sections || {})) if (/^[IVX]+$/.test(k)) sections[k] = Number(v) > 0 ? Number(v) : null;
-  sections.I = Number(p.sections?.I) > 0 ? Number(p.sections.I) : null;
-  return {
-    name: String(p.name).trim().slice(0, 80), business: String(p.business || 'Business').slice(0, 60), city: String(p.city || '').slice(0, 60),
-    mobile, kind: p.kind === 'All Risk' ? 'All Risk' : 'Named Perils',
-    addons: (p.addons || []).filter(a => ['storm_flood', 'earthquake'].includes(a)),
-    sections, start: /^\d{4}-\d{2}-\d{2}$/.test(p.start || '') ? p.start : null, years: Math.min(5, Math.max(1, parseInt(p.tenure) || 1)),
-    jewelleryInsured: !!p.jewelleryInsured, theftExtension: !!p.theftExtension, form: readForm(p.form),
-  };
-}
-
-// What differs between a declined proposal and a new one from the same person, in a few words.
-function changesFrom(a, b) {
-  const out = [], as = a.sections || {}, bs = b.sections || {};
-  if (a.kind !== b.kind) out.push('Section I type');
-  if (String(a.addons) !== String(b.addons)) out.push('add-ons');
-  for (const k of new Set([...Object.keys(as), ...Object.keys(bs)])) {
-    if (!(k in as)) out.push(`Section ${k} added`);
-    else if (!(k in bs)) out.push(`Section ${k} removed`);
-    else if (as[k] !== bs[k]) out.push(`Section ${k} value`);
-  }
-  if (a.years !== b.years) out.push('tenure');
-  if (a.start !== b.start) out.push('start date');
-  if (a.jewelleryInsured !== b.jewelleryInsured) out.push('jewellery cover');
-  if (a.theftExtension !== b.theftExtension) out.push('Theft Extension');
-  const lines = (f, h) => JSON.stringify((f || []).find(g => g[0] === h)?.[1] || []);
-  for (const [h] of b.form || []) {
-    if (lines(a.form, h) === lines(b.form, h)) continue;
-    if (/^Section I$|^Optional sections$/.test(h)) { if (!out.some(x => /^Section /.test(x))) out.push(`${h} details`); }
-    else out.push(h.toLowerCase() === 'about you' ? 'personal details' : `${h.toLowerCase()} details`);
-  }
-  return [...new Set(out)];
-}
-// The person's latest proposal, if HDFC ERGO declined it: a new one from them is a resubmission.
-const declinedBefore = (s, p) => { const last = s.proposals.find(x => x.mobile === p.mobile && nameMatches(p.name, x.name)); return last?.status === 'Not accepted' ? last : null; };
-
-// The filled proposal form, as headed groups of lines: [[heading, [line, ...]], ...].
-function readForm(f) {
-  if (!Array.isArray(f)) return [];
-  return f.slice(0, 12).filter(g => Array.isArray(g) && Array.isArray(g[1]))
-    .map(([h, lines]) => [String(h).slice(0, 80), lines.slice(0, 20).map(l => String(l).slice(0, 400))]);
-}
-
-// A person added on the People page: a proposal's fields plus a required start date (a past one makes an expired policy).
-function readPerson(p) {
-  const r = readProposal(p);
-  if (!r || !r.start) return null;
-  return r;
-}
-
-// Storage: 'state' holds claims, call-backs, sessions and proposals (Reset clears it);
-// 'people' holds added policyholders and the next policy number (Reset clears it).
+// Storage: 'state' holds claims, call-backs, application requests and chat sessions; Reset clears it.
 export class ClaimsStore extends DurableObject {
   async state() {
     const s = (await this.ctx.storage.get('state')) || { claims: [], callbacks: [], sessions: {}, next: 412 };
-    s.proposals ||= [];
-    s.drafts ||= [];
-    s.people = (await this.ctx.storage.get('people')) || { list: [], next: 10004 };
+    s.applications ||= [];
     return s;
   }
   save(s) {
-    const { people, ...rest } = s;
-    return this.ctx.storage.put({ state: rest, people });
-  }
-  newProposal(s, p) {
-    const reference = `PRP-2026-${String(101 + s.proposals.length).padStart(4, '0')}`;
-    const { id, at, reference: _r, edit_requested: _e, ...fields } = p;
-    const prev = declinedBefore(s, p);
-    s.proposals.unshift({ reference, ...fields, status: 'Proposal received', at: new Date().toISOString(), via: id ? 'chat' : 'apply',
-      ...(prev ? { resubmit_of: prev.reference, changes: changesFrom(prev, p) } : {}) });
-    return reference;
-  }
-
-  // Issue a policy number and keep the person in the people store.
-  addPerson(s, p, source) {
-    const policy = `VS-${p.start.slice(0, 4)}-${s.people.next++}`;
-    const person = {
-      name: p.name, business: p.business, city: p.city, policy, mobile: p.mobile,
-      start: p.start, end: endFor(p.start, p.years), kind: p.kind, addons: p.addons, sections: p.sections,
-      jewelleryInsured: !!p.jewelleryInsured, theftExtension: !!p.theftExtension, form: p.form || [],
-      source, proposal: p.reference, added_at: new Date().toISOString(),
-    };
-    s.people.list.push(person);
-    return person;
+    return this.ctx.storage.put('state', s);
   }
 
   async fetch(request) {
@@ -393,101 +308,14 @@ export class ClaimsStore extends DurableObject {
     if (url.pathname === '/api/state' && request.method === 'GET') {
       const s = await this.state();
       return json({
-        customers: allCustomers(s).map(c => ({
-          name: c.name, business: c.business, city: c.city, policy: c.policy, mobile: c.mobile, otp: DEMO_OTP,
-          kind: c.kind, addons: c.addons, sections: c.sections, start: c.start, end: c.end,
-          jewelleryInsured: !!c.jewelleryInsured, theftExtension: !!c.theftExtension, form: c.form || [],
-          source: c.source || 'demo', status: statusOf(c),
-        })),
-        claims: s.claims, callbacks: s.callbacks, statuses: STATUSES, proposals: s.proposals, today: today(),
+        customers: CUSTOMERS.map(c => ({ name: c.name, business: c.business, city: c.city, policy: c.policy, mobile: c.mobile, otp: DEMO_OTP, start: c.start, end: c.end, status: statusOf(c) })),
+        claims: s.claims, callbacks: s.callbacks, applications: s.applications, today: today(),
       });
     }
-    // Reset puts the demo back to its start: only the three made-up customers remain.
+    // Reset puts the demo back to its start (also clears anything an older version stored).
     if (url.pathname === '/api/reset' && request.method === 'POST') {
-      await this.ctx.storage.delete(['state', 'people']);
+      await this.ctx.storage.deleteAll();
       return json({ ok: true });
-    }
-    if (url.pathname === '/api/people' && request.method === 'POST') {
-      const p = readPerson(await request.json().catch(() => ({})));
-      if (!p) return json({ error: 'A name, a 10-digit mobile and a start date are needed' }, 400);
-      const s = await this.state();
-      const person = this.addPerson(s, p, 'added');
-      await this.save(s);
-      return json(person);
-    }
-    if (url.pathname === '/api/people/remove-added' && request.method === 'POST') {
-      const s = await this.state();
-      s.people.list = [];
-      await this.save(s);
-      return json({ ok: true });
-    }
-    const pp = url.pathname.match(/^\/api\/people\/([\w-]+)$/);
-    if (pp && request.method === 'DELETE') {
-      const s = await this.state();
-      const before = s.people.list.length;
-      s.people.list = s.people.list.filter(c => c.policy !== pp[1]);
-      if (s.people.list.length === before) return json({ error: 'Only added people can be removed' }, 404);
-      await this.save(s);
-      return json({ ok: true });
-    }
-    // A proposal reviewed on the Apply tab but not yet submitted; the chat can submit it (submit_proposal).
-    if (url.pathname === '/api/drafts' && request.method === 'POST') {
-      const p = readProposal(await request.json().catch(() => ({})));
-      if (!p) return json({ error: 'A name and a 10-digit mobile are needed' }, 400);
-      const s = await this.state();
-      const id = crypto.randomUUID().slice(0, 8);
-      s.drafts = [{ id, ...p, at: new Date().toISOString() }, ...s.drafts.filter(d => d.mobile !== p.mobile)].slice(0, 30);
-      await this.save(s);
-      return json({ id });
-    }
-    const dr = url.pathname.match(/^\/api\/drafts\/([\w-]+)$/);
-    if (dr) {
-      const s = await this.state();
-      const d = s.drafts.find(x => x.id === dr[1]);
-      if (!d) return json({ error: 'No such draft' }, 404);
-      if (request.method === 'GET') return json({ id: d.id, reference: d.reference || null, edit_requested: d.edit_requested || null });
-      if (request.method === 'POST') { d.reference = String((await request.json().catch(() => ({}))).reference || '').slice(0, 20) || null; await this.save(s); return json({ ok: true }); }
-    }
-    if (url.pathname === '/api/proposals' && request.method === 'POST') {
-      const p = readProposal(await request.json().catch(() => ({})));
-      if (!p) return json({ error: 'A name and a 10-digit mobile are needed' }, 400);
-      const s = await this.state();
-      this.newProposal(s, p);
-      await this.save(s);
-      return json(s.proposals[0]);
-    }
-    // A proposal goes: Proposal received → (approve) Awaiting premium → (premium) Policy issued. Decline is possible until the policy is issued.
-    const pr = url.pathname.match(/^\/api\/proposals\/([\w-]+)(?:\/(approve|decline|premium))?$/);
-    if (pr) {
-      const s = await this.state();
-      const p = s.proposals.find(x => x.reference === pr[1]);
-      if (!p) return json({ error: 'No such proposal' }, 404);
-      if (request.method === 'GET') return json(p);
-      const allowed = { approve: ['Proposal received'], decline: ['Proposal received', 'Awaiting premium'], premium: ['Awaiting premium'] }[pr[2]];
-      if (request.method !== 'POST' || !allowed?.includes(p.status)) return json({ error: `This proposal is "${p.status}"; that step is not possible now` }, 400);
-      if (pr[2] === 'decline') p.status = 'Not accepted';
-      else if (pr[2] === 'approve') { p.status = 'Awaiting premium'; p.approved_at = new Date().toISOString(); }
-      else {
-        // The policy exists only once the premium is in; a future start date makes it "not started" until then.
-        const start = p.start && p.start > today() ? p.start : today();
-        p.policy = this.addPerson(s, { ...p, start }, 'proposal').policy;
-        p.status = 'Policy issued';
-      }
-      p.decided_at = new Date().toISOString();
-      await this.save(s);
-      return json(p);
-    }
-    const m = url.pathname.match(/^\/api\/claims\/([\w-]+)\/status$/);
-    if (m && request.method === 'POST') {
-      const { status } = await request.json().catch(() => ({}));
-      if (!STATUSES.includes(status)) return json({ error: 'Unknown status' }, 400);
-      const s = await this.state();
-      const claim = s.claims.find(c => c.reference === m[1]);
-      if (!claim) return json({ error: 'No such claim' }, 404);
-      claim.status = status;
-      claim.history.push({ status, at: new Date().toISOString() });
-      await this.save(s);
-      return json(claim);
     }
     return json({ error: 'Not found' }, 404);
   }
@@ -529,18 +357,8 @@ export class ClaimsStore extends DurableObject {
       const otp = digits.length === 16 && digits.slice(0, 10) === c?.mobile ? digits.slice(10) : digitsOf(a.otp);
       if (c && session.pending === c.policy && otp) return this.call('verify_otp', { otp }, conv);
       const mobile = otp && digits.length === 16 ? digits.slice(0, 10) : digits.slice(-10);
-      // Someone who applied but has no policy yet: say where it stands instead of "no match".
-      // Newest first: the latest proposal from this person decides what to tell them.
-      const newest = String(a.name || '').trim() && s.proposals.find(p => p.mobile === mobile && nameMatches(a.name, p.name));
-      const waiting = (!c || c.mobile !== mobile) && ['Proposal received', 'Awaiting premium'].includes(newest?.status) && newest;
-      if (waiting) return { ok: false, no_policy_yet: true, say: waiting.status === 'Awaiting premium'
-        ? `This mobile has proposal ${waiting.reference}, approved by HDFC ERGO but the premium has not been received yet. There is no policy number and no cover until the premium is paid; nothing that happens before that is covered. Tell the customer this and that the status shows in the Apply tab.`
-        : `This mobile has proposal ${waiting.reference}, still waiting for HDFC ERGO's decision. There is no policy number and no cover yet. Tell the customer this and that the status shows in the Apply tab.` };
-      const latest = !c && newest;
-      if (latest?.status === 'Not accepted') return { ok: false, no_policy_yet: true, say: `This mobile's proposal ${latest.reference} was not accepted by HDFC ERGO, so there is no policy and no cover. Tell the customer this, that they can correct and submit it again from the Apply tab, or ask for a call-back to understand why.` };
-      if (latest?.status === 'Policy issued' && !String(a.policy_number || '').trim()) return { ok: false, policy_issued: true, say: `Good news to give: HDFC ERGO accepted proposal ${latest.reference}${latest.resubmit_of ? ' (the resubmitted one)' : ''}, the premium was received and the policy is issued. The policy number shows in the Apply tab. To talk about their cover, ask for that policy number, then call start_verification with name, policy number and mobile.` };
-      if (!c && !String(a.policy_number || '').trim()) return { ok: false, say: 'No pending proposal matches that name and mobile. Ask the customer to check both, or for their policy number if they already have one.' };
-      if (!c || c.mobile !== mobile) return { ok: false, say: 'No policy matches that policy number and mobile number. Ask the customer to check both, or contact HDFC ERGO on 022 6158 2020 / 022 6234 6234.' };
+      if (!c && !String(a.policy_number || '').trim()) return { ok: false, say: `Ask for their policy number. ${NO_POLICY}` };
+      if (!c || c.mobile !== mobile) return { ok: false, say: `No policy matches that policy number and mobile number. Ask the customer to check both (it is on the policy schedule), or contact ${CONTACTS}. Do not assume they have no policy; only if they say they do not have one: ${NO_POLICY}` };
       if (!String(a.name || '').trim()) return { ok: false, say: 'Ask for the policyholder\'s name, then call start_verification again with the name, policy number and mobile.' };
       if (!nameMatches(a.name, c.name)) return { ok: false, say: 'The name does not match the name on this policy. Ask the customer to give the policyholder\'s name as on the policy. Do not reveal the name on the policy.' };
       session.pending = c.policy; session.tries = 0;
@@ -565,29 +383,27 @@ export class ClaimsStore extends DurableObject {
       // Perfox drops a reply when a tool result contains the word "expired", so it is never sent.
       return { ok: true, first_name: c.name.split(' ')[0], business: c.business, policy_status: { expired: 'ended', expiring: 'ends soon' }[st] || st, say: `Verified. ${standing} Greet them by first name and continue with what they asked.` };
     }
-    if (name === 'submit_proposal') {
+    if (name === 'request_application') {
       const mobile = digitsOf(a.mobile).slice(-10);
-      const d = String(a.name || '').trim() && s.drafts.find(x => x.mobile === mobile && nameMatches(a.name, x.name));
-      if (!d) return { ok: false, say: 'There is no reviewed proposal for that name and mobile. Ask them to fill the Apply tab and click "Review my proposal" first, then ask you again. Do not collect the form in chat.' };
-      const last = d.reference && s.proposals.find(x => x.reference === d.reference);
-      if (last && last.status !== 'Not accepted') return { ok: false, already_submitted: true, reference: last.reference, status: last.status, say: `This proposal was already submitted as ${last.reference}; its status is "${last.status}". Tell them; it shows in the Apply tab. Do not submit again.` };
-      // Opening the form for changes: the Apply tab shows it with their previous answers.
-      if (a.edit === true) {
-        d.edit_requested = Date.now();
-        await this.save(s);
-        return { ok: true, opened_for_editing: true, say: 'Their proposal form is now open in the Apply tab with all their previous answers filled in. Tell them to change what they need, click "Review my proposal", and then ask you to submit it. Do not submit anything now.' };
-      }
-      const prev = declinedBefore(s, d);
-      const changes = prev ? changesFrom(prev, d) : [];
-      // A declined proposal sent back unchanged will most likely be declined again: ask first.
-      if (prev && !changes.length && !(a.confirm === true && a.unchanged === true)) return { ok: true, needs_decision: true, declined: prev.reference, say: `HDFC ERGO did not accept proposal ${prev.reference}, and this is the same proposal with nothing changed. Tell them that and ask if they want to change anything before resubmitting. If yes, call submit_proposal with edit true; this opens their form in the Apply tab with their answers filled in. If no, say once that the same proposal will most likely be declined again and offer a call-back from HDFC ERGO to learn why; only if they still want to resubmit it unchanged, call submit_proposal with confirm true and unchanged true.` };
-      const sections = Object.entries(d.sections).map(([k, v]) => `Section ${k}${v ? ' ' + rupees(v) : ''}`).join(', ');
-      const summary = `${d.name}, mobile ${d.mobile}, ${d.kind}${d.addons.length ? ' with ' + d.addons.map(x => x === 'storm_flood' ? 'storm and flood' : 'earthquake').join(' and ') : ''}, ${sections}, ${d.years} year${d.years > 1 ? 's' : ''}${prev ? (changes.length ? ` (resubmitting ${prev.reference} with changes: ${changes.join(', ')})` : ` (resubmitting ${prev.reference} unchanged)`) : ''}`;
-      if (a.confirm !== true) return { ok: true, needs_confirmation: true, summary, say: 'Read this summary back in one line and ask if they want it submitted to HDFC ERGO now. Only if they clearly say yes, call submit_proposal again with the same name and mobile and confirm true.' };
-      const reference = this.newProposal(s, d);
-      d.reference = reference;
+      const missing = [!String(a.name || '').trim() && 'name', mobile.length !== 10 && '10-digit mobile', !String(a.business || '').trim() && 'type of business', !String(a.city || '').trim() && 'city'].filter(Boolean);
+      if (missing.length) return { ok: false, say: `Ask for their ${missing.join(', ')}, then call request_application again. Nothing else is needed; never ask for PAN, Aadhaar, KYC or bank details.` };
+      const old = s.applications.find(x => x.mobile === mobile);
+      if (old) return { ok: true, reference: old.reference, already_requested: true, say: `HDFC ERGO already has this request as ${old.reference}; a representative will call the mobile ending ${mobile.slice(-4)}. Tell them; do not request it again.` };
+      const app = { name: String(a.name).trim().slice(0, 80), mobile, business: String(a.business).trim().slice(0, 60), city: String(a.city).trim().slice(0, 60), interest: String(a.interest || '').slice(0, 300) };
+      if (a.confirm !== true) return { ok: true, needs_confirmation: true, summary: `${app.name}, mobile ${mobile}, ${app.business} in ${app.city}${app.interest ? `, interested in ${app.interest}` : ''}`, say: 'Read this back in one line and ask if they want HDFC ERGO to call them to complete the application. Only after a clear yes, call request_application again with the same details and confirm true.' };
+      const reference = `APP-2026-${String(101 + s.applications.length).padStart(4, '0')}`;
+      s.applications.unshift({ reference, ...app, at: new Date().toISOString() });
       await this.save(s);
-      return { ok: true, reference, say: `Submitted to HDFC ERGO as ${reference}. Tell them: HDFC ERGO will approve or decline it; once approved, the policy is issued only after the premium is received, and there is no cover until then. The status shows in the Apply tab. PAN, KYC and bank details go directly to HDFC ERGO.` };
+      return { ok: true, reference, say: `Passed to HDFC ERGO as ${reference}. Tell them: an HDFC ERGO representative will call the mobile ending ${mobile.slice(-4)} to explain the options and premium and complete the application; PAN, KYC and bank details go directly to HDFC ERGO then. There is no policy and no cover until HDFC ERGO accepts the application and the premium is received, and a new policy never covers a loss that has already happened.` };
+    }
+    // A call-back works for anyone: a verified policyholder, or someone who gives a name and mobile.
+    if (name === 'request_callback') {
+      const mobile = me ? me.mobile : digitsOf(a.mobile).slice(-10);
+      if (!me && (!String(a.name || '').trim() || mobile.length !== 10)) return { ok: false, say: 'Ask for their name and 10-digit mobile, then call request_callback again with the reason.' };
+      const reference = `CB-${String(s.callbacks.length + 101)}`;
+      s.callbacks.unshift({ reference, policy: me?.policy || null, customer: me ? me.name : String(a.name).trim().slice(0, 80), mobile, reason: String(a.reason || '').slice(0, 300), at: new Date().toISOString() });
+      await this.save(s);
+      return { ok: true, callback_reference: reference, say: `An HDFC ERGO ${me ? 'claims officer' : 'representative'} will call the mobile ending ${mobile.slice(-4)}. Give the reference ${reference}.` };
     }
     if (!me) return needVerified;
 
@@ -613,7 +429,7 @@ export class ClaimsStore extends DurableObject {
         session.outside = r.incident_date;
         await this.save(s);
         return { ok: true, result: 'not_covered_outside_period', incident_date: r.incident_date,
-          say: `Answer now, in their language. The loss on ${pretty(r.incident_date)} is not covered: ${after ? `the policy period ended on ${pretty(me.end)}` : `the policy period starts on ${pretty(me.start)}`}, so there was no cover on that date and there is no claim to register. Say this kindly and clearly. Do not ask more questions about the loss and do not offer to register it. ${after ? 'If they want cover again, they can apply for a new policy in the Apply tab on this page.' : ''} Give the HDFC ERGO contacts if they want to talk to someone. In chat, end with "Source: Policy schedule (policy period)" and "The policy wording is final."` };
+          say: `Answer now, in their language. The loss on ${pretty(r.incident_date)} is not covered: ${after ? `the policy period ended on ${pretty(me.end)}` : `the policy period starts on ${pretty(me.start)}`}, so there was no cover on that date and there is no claim to register. Say this kindly and clearly. Do not ask more questions about the loss and do not offer to register it. ${after ? 'If they want cover again, offer to have HDFC ERGO call them about a new policy (request_application); a new policy covers only losses from its start.' : ''} Give the HDFC ERGO contacts if they want to talk to someone. In chat, end with "Source: Policy schedule (policy period)" and "The policy wording is final."` };
       }
       // Likely not covered: no surveyor steps or document list (they suggest a payout is coming); an honest offer to register instead.
       if (r.result === 'likely_not_covered') {
@@ -635,7 +451,7 @@ export class ClaimsStore extends DurableObject {
       const given = Object.fromEntries(Object.entries(a).filter(([, v]) => v !== undefined && v !== null && v !== ''));
       a = { ...(session.lastCheck || {}), ...given };
       const r = checkClaim(me, a);
-      if (r.incident_date > me.end || r.incident_date < me.start) return { ok: false, outside_period: true, say: `This loss (${pretty(r.incident_date)}) is outside the policy period (${pretty(me.start)} to ${pretty(me.end)}), so there is no claim to register. Tell them kindly; they can apply for a new policy in the Apply tab.` };
+      if (r.incident_date > me.end || r.incident_date < me.start) return { ok: false, outside_period: true, say: `This loss (${pretty(r.incident_date)}) is outside the policy period (${pretty(me.start)} to ${pretty(me.end)}), so there is no claim to register. Tell them kindly; if they want cover again, offer to have HDFC ERGO call them about a new policy (request_application).` };
       // The same loss registered twice in one chat (a repeated confirm, or an old Confirm button) keeps its first reference.
       const key = JSON.stringify([me.policy, r.event, r.incident_date, [...r.items].sort()]);
       const dup = session.registered?.key === key && s.claims.find(c => c.reference === session.registered.reference);
@@ -646,22 +462,16 @@ export class ClaimsStore extends DurableObject {
       s.claims.unshift({
         reference, policy: me.policy, customer: me.name, business: me.business, ...r,
         estimated_loss: a.estimated_loss || null, description: String(a.description || '').slice(0, 500),
-        status: 'Registered', registered_at: now, history: [{ status: 'Registered', at: now }],
+        status: 'Registered', registered_at: now,
       });
       await this.save(s);
-      if (r.result === 'likely_not_covered') return { ok: true, claim_reference: reference, result: r.result, documents: documentsFor(r.event), say: `Give the customer the claim reference ${reference}. Say HDFC ERGO will review it and decide, and list the documents to keep ready briefly (short bullets in chat; on a voice call, the two most important). Tell them they can ask "What's my claim status?" here any time. No Source line in this reply.` };
-      return { ok: true, claim_reference: reference, result: r.result, next: NEXT_STEP.Registered, say: `Give the customer the claim reference ${reference}. Tell them they can ask "What's my claim status?" here any time. No Source line in this reply.` };
+      if (r.result === 'likely_not_covered') return { ok: true, claim_reference: reference, result: r.result, documents: documentsFor(r.event), say: `Say the claim is registered and give the reference ${reference}. Remind them in one line why it is likely not covered, and that HDFC ERGO will still review it. Then who takes it from here: ${HANDLED_BY(me.mobile)} List the documents to keep ready briefly (short bullets in chat; on a voice call, the two most important). No Source line in this reply.` };
+      return { ok: true, claim_reference: reference, result: r.result, say: `Say the claim is registered and give the reference ${reference}. Then who takes it from here: ${HANDLED_BY(me.mobile)} No Source line in this reply.` };
     }
     if (name === 'get_claim_status') {
       const mine = s.claims.filter(c => c.policy === me.policy && (!a.claim_reference || clean(c.reference) === clean(a.claim_reference)));
       if (!mine.length) return { ok: true, claims: [], say: 'No claims are registered on this policy yet.' };
-      return { ok: true, say: 'Give the status and next step in a sentence or two. No Source line in this reply.', claims: mine.map(c => ({ reference: c.reference, event: c.eventLabel, registered: c.registered_at.slice(0, 10), status: c.status, next: NEXT_STEP[c.status] })) };
-    }
-    if (name === 'request_callback') {
-      const reference = `CB-${String(s.callbacks.length + 101)}`;
-      s.callbacks.unshift({ reference, policy: me.policy, customer: me.name, mobile: me.mobile, reason: String(a.reason || '').slice(0, 300), at: new Date().toISOString() });
-      await this.save(s);
-      return { ok: true, callback_reference: reference, say: `An HDFC ERGO claims officer will call the registered mobile ending ${me.mobile.slice(-4)}. Give the reference ${reference}.` };
+      return { ok: true, say: `In a sentence or two: each claim is registered with HDFC ERGO, and ${HANDLED_BY(me.mobile)} For anything more, offer a call-back. No Source line in this reply.`, claims: mine.map(c => ({ reference: c.reference, event: c.eventLabel, registered: c.registered_at.slice(0, 10), status: 'Registered' })) };
     }
     return { ok: false, error: `Unknown tool ${name}` };
   }
