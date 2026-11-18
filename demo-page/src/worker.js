@@ -94,11 +94,19 @@ function addDays(date, n) {
   return new Date(Date.parse(date) + n * 86400e3).toISOString().slice(0, 10);
 }
 
+// A loss date as YYYY-MM-DD, also from "1 October 2026" or "2026/10/01" (the model does not always send ISO).
+function isoDate(v) {
+  const s = String(v || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const t = s && Date.parse(s.replace(/(\d)(st|nd|rd|th)\b/i, '$1') + ' 12:00 UTC');
+  return t ? new Date(t).toISOString().slice(0, 10) : null;
+}
+
 function checkClaim(c, a) {
   const reasons = [], notes = [];
   const event = EVENTS[a.event] ? a.event : 'other';
   const items = (a.items || []).filter(i => ITEMS.includes(i));
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(a.incident_date || '') ? a.incident_date : addDays(today(), -(Number(a.days_ago) || 0));
+  const date = isoDate(a.incident_date) || addDays(today(), -(Number(a.days_ago) || 0));
   const fail = (reason, source) => reasons.push({ reason, source });
 
   // 1. Policy active on the incident date.
@@ -248,7 +256,9 @@ const allCustomers = () => CUSTOMERS;
 const pretty = d => new Date(d + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 // What to tell the model about where the policy stands (never the word "expired": Perfox drops such replies).
 function standingOf(c) {
-  return { expired: `Policy period: ${pretty(c.start)} to ${pretty(c.end)}. That period is over, so the policy has ended and losses after ${pretty(c.end)} are not covered. Tell them this in a sentence, then help with what they asked.`,
+  // Nothing for an ended policy: with any ended-policy text here, Perfox showed its fallback after the OTP every time
+  // (18 Nov 2026), while the same reply shape for an active policy worked. check_claim and get_my_policy say it instead.
+  return { expired: '',
     upcoming: `The policy starts on ${pretty(c.start)}, so cover has not begun yet and losses before that date are not covered. Tell them this.`,
     expiring: `This policy is active but ends on ${pretty(c.end)}; mention that it ends soon.`,
     active: `This policy is active until ${pretty(c.end)}.` }[statusOf(c)];
@@ -367,7 +377,7 @@ export class ClaimsStore extends DurableObject {
     }
     if (name === 'verify_otp') {
       // Already verified (the model sometimes calls this again on the next message): repeat where the policy stands.
-      if (!session.pending && me) return { ok: true, first_name: me.name.split(' ')[0], say: `Already verified; do not ask for an OTP. ${standingOf(me)} Continue with what the customer asked.` };
+      if (!session.pending && me) return { ok: true, first_name: me.name.split(' ')[0], say: `Already verified; do not ask for an OTP. ${standingOf(me) ? standingOf(me) + ' ' : ''}Continue with what the customer asked.` };
       if (!session.pending) return needVerified;
       if (digitsOf(a.otp) !== DEMO_OTP) {
         session.tries = (session.tries || 0) + 1;
@@ -381,7 +391,7 @@ export class ClaimsStore extends DurableObject {
       // Say where the policy stands, so the model never assumes "active".
       const st = statusOf(c), standing = standingOf(c);
       // Perfox drops a reply when a tool result contains the word "expired", so it is never sent.
-      return { ok: true, first_name: c.name.split(' ')[0], business: c.business, policy_status: { expired: 'ended', expiring: 'ends soon' }[st] || st, say: `Verified. ${standing} Greet them by first name and continue with what they asked.` };
+      return { ok: true, first_name: c.name.split(' ')[0], business: c.business, ...(st === 'expired' ? {} : { policy_status: st === 'expiring' ? 'ends soon' : st }), say: `Verified. ${standing ? standing + ' ' : ''}Greet them by first name and continue with what they asked.` };
     }
     if (name === 'request_application') {
       const mobile = digitsOf(a.mobile).slice(-10);
