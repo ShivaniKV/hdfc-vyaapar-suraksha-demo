@@ -10,12 +10,12 @@ import { DurableObject } from 'cloudflare:workers';
 const CUSTOMERS = [
   {
     name: 'Ramesh Jain', business: 'Jewellery shop', city: 'Jaipur',
-    policy: 'VS-2026-10001', mobile: '9829000001',
+    policy: 'VS-101', mobile: '9000000001',
     start: '2026-04-01', end: '2027-03-31', kind: 'All Risk', addons: [],
     sections: { I: 4000000, II: 2500000, XI: 200000 },
     jewelleryInsured: true, theftExtension: true,
     form: [
-      ['About you', ['Ramesh Jain, 14 Johari Bazaar, Jaipur 302003', '9829000001 · ramesh.jain@example.com', 'Self-employed, jewellery retail', 'Tenure 1 year, start 1 Apr 2026']],
+      ['About you', ['Ramesh Jain, 14 Johari Bazaar, Jaipur 302003', '9000000001 · ramesh.jain@example.com', 'Self-employed, jewellery retail', 'Tenure 1 year, start 1 Apr 2026']],
       ['Section I', ['All Risk', 'Building basis: Reinstatement value; contents basis: Reinstatement value', 'Furniture and fittings ₹5,00,000; Finished stock ₹35,00,000', 'Locations 1; floater No; declaration No']],
       ['Premises', ['RCC construction, ground floor; CCTV Yes; 24x7 guard No; fire station within 2 km', 'Fire protection: Fire extinguishers']],
       ['Section II Burglary and House Breaking', ['Sum insured ₹25,00,000, market value', 'Gold, silver, jewellery or precious stones specifically insured: Yes (₹25,00,000)', 'CCTV or burglar alarm: Yes; iron grills and locks: Yes; stock books: Yes', 'Premises ever left unoccupied: No', 'Add-ons: Theft extension']],
@@ -26,12 +26,12 @@ const CUSTOMERS = [
   },
   {
     name: 'Sunita Sharma', business: 'Kirana store', city: 'Patna',
-    policy: 'VS-2026-10002', mobile: '9835000002',
+    policy: 'VS-102', mobile: '9000000002',
     start: '2026-06-01', end: '2027-05-31', kind: 'Named Perils', addons: [],
     sections: { I: 800000, II: 200000 },
     jewelleryInsured: false, theftExtension: false,
     form: [
-      ['About you', ['Sunita Sharma, Shop 3, Boring Road, Patna 800001', '9835000002 · sunita.kirana@example.com', 'Self-employed, grocery retail', 'Tenure 1 year, start 1 Jun 2026']],
+      ['About you', ['Sunita Sharma, Shop 3, Boring Road, Patna 800001', '9000000002 · sunita.kirana@example.com', 'Self-employed, grocery retail', 'Tenure 1 year, start 1 Jun 2026']],
       ['Section I', ['Named Perils, no storm and flood or earthquake add-on', 'Contents basis: Reinstatement value', 'Furniture and fittings ₹1,50,000; Finished stock ₹6,50,000', 'Locations 1']],
       ['Premises', ['Brick construction, ground floor; CCTV No; guard No', 'Storage: stock above floor level No; on racks Yes; plinth raised above ground No', 'Fire protection: Fire extinguishers']],
       ['Section II Burglary and House Breaking', ['Sum insured ₹2,00,000, market value', 'Gold, silver, jewellery or precious stones specifically insured: No', 'CCTV or burglar alarm: No; iron grills and locks: Yes', 'Premises ever left unoccupied: No', 'Add-ons: None']],
@@ -41,12 +41,12 @@ const CUSTOMERS = [
   },
   {
     name: 'Imran Khan', business: 'Electronics shop', city: 'Pune',
-    policy: 'VS-2025-10003', mobile: '9822000003',
+    policy: 'VS-103', mobile: '9000000003',
     start: '2025-10-01', end: '2026-09-30', kind: 'Named Perils', addons: [],
     sections: { I: 1500000, II: 300000, IV: 200000 },
     jewelleryInsured: false, theftExtension: false,
     form: [
-      ['About you', ['Imran Khan, 22 FC Road, Pune 411004', '9822000003 · imran.electronics@example.com', 'Self-employed, electronics retail', 'Tenure 1 year, start 1 Oct 2025 (not renewed)']],
+      ['About you', ['Imran Khan, 22 FC Road, Pune 411004', '9000000003 · imran.electronics@example.com', 'Self-employed, electronics retail', 'Tenure 1 year, start 1 Oct 2025 (not renewed)']],
       ['Section I', ['Named Perils, no add-ons', 'Contents basis: Reinstatement value', 'Furniture and fittings ₹3,00,000; Finished stock ₹12,00,000', 'Locations 2 (shop and godown)']],
       ['Premises', ['RCC construction, first floor; CCTV Yes; guard No', 'Fire protection: Fire extinguishers, smoke detectors']],
       ['Section II Burglary and House Breaking', ['Sum insured ₹3,00,000, market value', 'Gold, silver, jewellery or precious stones specifically insured: No', 'Premises ever left unoccupied: No', 'Add-ons: None']],
@@ -184,7 +184,7 @@ const TOOLS = [
   {
     name: 'start_verification',
     description: 'Start verifying an existing policyholder. Call this when the customer says they already have a Vyaapar Suraksha policy and wants help with their own policy or claim, once they have given their name, policy number and registered mobile number. Checks the name against the policy and sends a one-time password (OTP) to their mobile. Do not call it if they say they have no policy.',
-    input_schema: { type: 'object', properties: { name: { type: 'string', description: 'The name the customer gave' }, policy_number: { type: 'string', description: 'e.g. VS-2026-10001' }, mobile: { type: 'string', description: 'Registered mobile number' } }, required: ['policy_number', 'mobile'] },
+    input_schema: { type: 'object', properties: { name: { type: 'string', description: 'The name the customer gave' }, policy_number: { type: 'string', description: 'e.g. VS-101' }, mobile: { type: 'string', description: 'Registered mobile number' } }, required: ['policy_number', 'mobile'] },
   },
   {
     name: 'verify_otp',
@@ -296,9 +296,8 @@ function nameMatches(given, actual) {
 const findCustomer = (policy, s) => {
   const d = digitsOf(policy);
   const all = allCustomers(s);
-  // Last resort: the last five digits (10001, 10002…) are unique in the demo, and the mobile must still match.
-  return all.find(c => clean(c.policy) === clean(policy) || (d.length >= 9 && c.policy.replace(/\D/g, '') === d))
-    || (d.length >= 5 ? all.find(c => c.policy.endsWith(d.slice(-5))) : undefined);
+  // The digits alone (101, 102, 103) are unique in the demo, and the mobile must still match.
+  return all.find(c => clean(c.policy) === clean(policy) || (d.length >= 3 && c.policy.replace(/\D/g, '') === d));
 };
 
 // Storage: 'state' holds claims, call-backs, application requests and chat sessions; Reset clears it.
